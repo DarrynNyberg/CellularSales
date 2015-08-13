@@ -1,0 +1,35 @@
+<?php
+
+
+function nytech_test_menu() {
+  
+	$items['nytech/print_r/%node'] = array(
+		'page title' => 'Print_r the node',
+		'page callback' => 'node_print_r',
+		'page arguments' => array(2),
+		'access callback' => TRUE,
+	);
+	
+	return $items;
+}
+
+/*
+ * custom function yo!
+ */
+
+function node_print_r($node) {
+	return theme('nytech_test');
+}
+
+
+/**
+ * Implements hook_theme()
+ */
+function nytech_test_theme() {
+    return array(
+        'nytech_test' => array(
+            'render element' => 'elements',
+            'template' => 'templates/print_r',
+        ),
+    );
+}

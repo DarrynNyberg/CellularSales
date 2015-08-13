@@ -1,0 +1,4 @@
+GeoIP-132_20111004
+
+2012-02-13 desoi
+Updated PHP API to the latest version.

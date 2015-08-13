@@ -1,0 +1,1903 @@
+<?php
+
+/**
+ * @file
+ * Cellular Sales core web features module.
+ */
+ 
+include_once 'util.inc';
+include_once 'hooks.inc';
+
+/**
+ * Define the storeloc module constants
+ */
+define('LOCAL_AREA_MILES', 15);  // Radius # miles for "in your area".
+define('METER_2_MI', 0.00062137);  // Meters to miles conversion constant.
+define('MAP_HOME_ICON', 'http://chart.apis.google.com/chart?chst=d_map_pin_icon&chld=home%7CFE7569'); // %7C == |
+
+
+
+/**
+ * Implements of hook_permission().
+ */
+function cs_permission() {
+  return array(
+    'cs admin' => array(
+    'title' => t('Cellular Sales administrator'),
+    'description' => t('Perform administrative tasks for Cellular Sales web sites.'),
+    'restrict' => true,
+    ),
+  );
+}
+
+
+/**
+ * Implements hook_node_info().
+ */
+function cs_node_info() {
+  return array(
+    'store' => array(
+      'name' => t('Store'),
+      'base' => 'cs',
+      'description' => t('A Cellular Sales company store.'),
+      'title_label' => t('Store code'),
+      'locked' => true,
+    ),
+  );
+}
+
+
+
+/**
+ * Implementation of hook_insert().
+ */
+function cs_node_insert($node) {
+  if ($node->type == 'store') {
+    // Set node ID for the newly inserted store node.
+    $store = str_replace(' ','',strtoupper($node->title));
+    $store = explode('-',$store);
+    db_query('UPDATE {cs_store} SET nid = :nid WHERE marketid = :marketid AND loc = :loc',
+      array(':nid' => $node->nid, ':marketid' => $store[0], ':loc' => $store[1]));
+  }
+}
+
+
+/**
+ * Implements hook_node_presave().
+ */
+function cs_node_presave($node) {
+  if ($node->type == 'store') {
+    if (empty($node->nid)) {
+      //New store - create storeloc_store entry for values to be inserted into later
+      $node->title = str_replace(' ','', strtoupper($node->title));
+      $store = explode('-',$node->title);
+      db_query('INSERT INTO {cs_store} (marketid, loc, opened) VALUES (:marketid, :loc, 1)',  // Need "opened" set for CSOKI_StoreUpdate cron job.
+        array(':marketid' => $store[0], ':loc' => $store[1])); 
+      // Insert the store code into the "nid" hidden input; the real nodeID won't be available in the locationapi "save" operation.
+      $node->locations[0]['nid'] = $node->title;
+    }
+    // Only geocode if no lat/lng values entered and none are set for the location.
+    $lat = check_plain(trim($node->locations[0]['locpick']['user_latitude']));
+    $lng = check_plain(trim($node->locations[0]['locpick']['user_longitude']));
+    if (!$lat & !$lng) {
+      $lat = empty($node->location['latitude']) ? null : $node->location['latitude'];
+      $lng = empty($node->location['longitude']) ? null : $node->location['longitude'];
+    }
+    if (!$lat && !$lng) {
+      // Handle the address geocoding BEFORE the "location" module to grab the google accuracy value.
+      // Location module will just think lat/lng was user submitted.
+      // If lat/lng values entered, there will be locpick['user_latitude/user_longitude'] values, otherwise they're empty.
+      // If accuracy -1 this is an import and accuracy will be updated by cron. Also skip if we already have lat/lon.
+      if ($node->locations[0]['accuracy'] >= 0) {
+        $geocode = cs_geolocate_address($node->locations[0], true);
+        $node->locations[0]['accuracy'] = $geocode['acc'];
+        $node->locations[0]['locpick']['user_latitude'] = $geocode['lat'];
+        $node->locations[0]['locpick']['user_longitude'] = $geocode['lng'];
+        $node->locations[0]['locpick']['source'] = 3;  //Source of 1="user submitted"; 3="google geocode"
+      }
+    } else {
+      // Seems like all of this is not needed, but leaving as is for now.
+      if (!empty($node->nid)) {
+        // Did the user enter new lat/lng coordinates?
+        $sql = 'SELECT l.latitude, l.longitude, ss.geo_accuracy FROM {location} l
+          INNER JOIN {location_instance} li ON li.lid = l.lid
+          INNER JOIN {cs_store} ss ON ss.nid = li.nid
+          WHERE l.lid = :lid';
+        if ($values = db_query($sql, array(':lid' => $node->locations[0]['lid']))->fetchAssoc()) {
+          $values = (object)$values;
+          // If so, adjust "accuracy" value to 9 (best).  Have to set the geo accuracy no matter what because it is a disabled input, so no value was collected.
+          if ($values->latitude != $lat || $values->longitude != $lng) {
+            $node->locations[0]['accuracy'] = 9;
+          } else {
+            $node->locations[0]['accuracy'] = $values->geo_accuracy;
+          }
+        }
+      } else {
+        // New store with entered lat/lng - set accuracy to 9 as long as lat and lon.
+        $node->locations[0]['accuracy'] = empty($lat) || empty($lng) ? 0 : 9;
+      }
+    }
+  }
+}
+
+
+/**
+ * Implementation of hook_locationapi().
+ * 
+ * This is an api hook from the 'location' module.
+ */
+function cs_locationapi(&$location, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'fields':
+      //The nid field will contain the store code instead of the nodeID - to be consistent with creating a new store which doesn't have a nodeID in the beginning.
+      return array(
+        'accuracy' => t('Geocode accuracy'), 
+        'outlet' => t('Outlet number'), 
+        'csoki' => t('CSOKI update'),
+        'repair_center' => t('Smartphone repair center'),
+        'nid' => null
+      );
+    case 'defaults':
+      return array(
+        'accuracy' => array('default' => '', 'collect' => 1, 'weight' => 20),
+        'outlet' => array('default' => '', 'collect' => 1, 'weight' => 28),
+        'csoki' => array('default' => 1, 'collect' => 1, 'weight' => 29),
+        'repair_center' => array('default' => 0, 'collect' => 1, 'weight' => 30),
+        'nid' => array('default' => -2, 'collect' => 1, 'weight' => 40),
+      );
+    case 'field_expand':
+      switch ($a3) {
+        case 'accuracy':
+          return array(
+            '#type' => 'textfield',
+            '#title' => t('Geocode accuracy'),
+            '#size' => 8,
+            '#maxlength' => 4,
+            '#description' => t("Google's accuracy code (0 worst - 9 best) for the geocoded address."),
+            '#required' => 0,
+            '#disabled' => 1,
+            '#default_value' => $location,
+          );
+        case 'outlet':
+          return array(
+            '#type' => 'textfield',
+            '#title' => t('Outlet number'),
+            '#size' => 31,
+            '#maxlength' => 8,
+            '#description' => NULL,
+            '#required' => 0,
+            '#default_value' => $location,
+          );
+        case 'csoki':
+          return array(
+            '#type' => 'checkbox',
+            '#title' => t('CSOKI update'),
+            '#description' => t("Allow CSOKI to update these values. CSOKI will overwrite any changes you make."),
+            '#return_value' => 1,
+            '#default_value' => $location,
+          );
+        case 'repair_center':
+          return array(
+            '#type' => 'checkbox',
+            '#title' => t('Smartphone repair center'),
+            '#description' => t("Check the box if this location is a repair center."),
+            '#return_value' => 1,
+            '#default_value' => $location,
+          );
+        case 'nid':
+          return array('#type' => 'hidden', '#default_value' => $location);
+      }
+      break;
+      
+    case 'save':
+      $values = array();
+      $values[':accuracy'] = (empty($location['accuracy']) || !is_int($location['accuracy'])) ? 0 : $location['accuracy'];
+      $location['outlet'] = check_plain(trim(str_replace("'", "", $location['outlet'])));
+      $values[':outlet'] = empty($location['outlet']) ? null : $location['outlet'];
+      $values[':csoki'] = empty($location['csoki']) ? 0 : 1;
+      $values[':repair_center'] = empty($location['repair_center']) ? 0 : 1;
+      $store = explode('-', $location['nid']);
+      $values[':marketid'] = $store[0];
+      $values[':loc'] = $store[1];
+      $sql = 'UPDATE {cs_store} SET outlet = :outlet, geo_accuracy = :accuracy, csoki_update = :csoki, repair_center = :repair_center 
+        WHERE marketid = :marketid AND loc = :loc';
+      db_query($sql, $values);
+      break;
+      
+    case 'load':
+      $sql = "SELECT ss.outlet, CONCAT(ss.marketid,'-',ss.loc) AS st_code, ss.geo_accuracy, ss.csoki_update, ss.repair_center 
+        FROM {cs_store} ss INNER JOIN {location_instance} li ON li.nid = ss.nid WHERE li.lid = :lid";
+      $values = db_query($sql, array(':lid' => $location['lid']))->fetchAssoc();
+      if ($values) {
+        $values = (object)$values;
+        return array(
+          'accuracy' => ($values->geo_accuracy == null ? 'n/a' : $values->geo_accuracy),
+          'outlet' => $values->outlet,
+          'csoki' => $values->csoki_update,
+          'repair_center' => $values->repair_center,
+          'nid' => $values->st_code);
+      } else {
+        return array('accuracy' => 'n/a', 'outlet' => '', 'coski' => 0, 'repair_center' => 0, 'nid' => null);
+      }
+      break;
+  }
+}
+
+
+
+/**
+ * Format the address for google maps lookup.
+ *
+ * If street is an array, values are set from array keys, if they exist.
+ */
+function cs_format_geolocation_address($street, $city = '', $state = '', $zip = '') {
+  if (is_array($street)) {
+    $addr = $street;
+    $street = isset($addr['street']) ? $addr['street'] : '';
+    $city = isset($addr['city']) ? $addr['city'] : $city;
+    $state = isset($addr['state']) ? $addr['state'] : $state;
+    if (!$state && isset($addr['province'])) { // Allow field names used by the location module.
+      $state = $addr['province'];
+    }
+    $zip = isset($addr['zip']) ? $addr['zip'] : $zip;
+    if (!$zip && isset($addr['postal_code'])) {
+      $zip = $addr['postal_code'];
+    }
+  }
+  // Remove all commas, slashes, periods, & #'s from the input.
+  $rmArr = array (',','/','.','#',"'");
+  $street = trim(str_replace($rmArr, '' ,$street));
+  $city = trim(str_replace($rmArr, '' ,$city));
+  $state = trim(str_replace($rmArr, '' ,$state));
+  $zip = trim(str_replace($rmArr, '', $zip));
+  // Format address for google - add 'USA' to the end!
+  return ($street == '' ? '' : $street . ',') . ($city == '' ? '' : $city .',') . ($state == '' ? '' : $state . ' ') . $zip . ',USA';
+}
+
+
+/**
+ * Path of Maxmind geolocation database.
+ */
+function cs_maxmind_db_path() {
+  return variable_get('cs_maxmind_db_path', file_directory_path() . '/maxmind/GeoIPCity.dat');
+}
+
+
+/**
+ * Geolocate IP address with Maxmind database.
+ */
+function cs_geolocate_ip_address($ipAddr = null, $default = true) {
+  include_once(drupal_get_path('module', 'cs') . '/geoip/geoipcity.inc');
+  $ipLoc = null;
+  if (!$ipAddr) {
+    $ipAddr = $_SERVER['REMOTE_ADDR'];
+    // An IP address of localhost will return a 0,0 location (bad!). Use the default.
+    if ($ipAddr == '127.0.0.1' || $ipAddr == '::1') { 
+      $ipAddr = null;
+    }
+  }
+  if ($ipAddr) {
+    $db_path = cs_maxmind_db_path();
+    try {
+      $gi = geoip_open($db_path, GEOIP_STANDARD);
+      $ipLoc = geoip_record_by_addr($gi, $ipAddr);
+    } catch (Exception $e) {
+      watchdog('cs', 'Maxmind geolocation exception: %e.', array('%e' => $e->getMessage()), WATCHDOG_ERROR);
+    }
+  }
+  if (!$ipLoc && is_string($ipAddr)) {
+    watchdog('cs', 'Could not geolocate IP address %ip.', array('%ip' => $ipAddr));
+  }
+  if ($default && !$ipLoc) { // Default to Knoxville 37923
+    $ipLoc = new geoiprecord;
+    $ipLoc->latitude = 35.9276062;
+    $ipLoc->longitude = -84.0854432;
+    $ipLoc->city = 'Knoxville';
+    $ipLoc->region = 'TN';
+    $ipLoc->postal_code = '37923';
+    $ipLoc->country_code = 'US';
+  }
+  return $ipLoc;
+}
+
+
+/**
+ * Automatically install Maxmind IP geolocation database updates.
+ */
+function cs_maxmind_db_update() {
+  $last_update = variable_get('cs_maxmind_last_update', '2013-09-24');
+  $tue_time = strtotime('last Tuesday'); // Maxmind updates every tuesday.
+  $tuesday = date('Y-m-d', $tue_time);
+  if ($last_update != $tuesday && $tue_time > strtotime($last_update)) {
+    try {
+      set_time_limit(0);
+      $db_path = cs_maxmind_db_path();
+      $db_dir = dirname($db_path);
+      $db_file = basename($db_path);
+      $download = $db_dir . "/$tuesday.tar.gz";
+      $date = str_replace('-', '', $tuesday);
+			$geoip_version = variable_get('cs_maxmind_geoip_version', 133); // They apparently change this without notice.
+      $extract_dir = 'GeoIP-' . $geoip_version . '_' . $date; // Set in the archive somehow.
+      $fp = fopen($download, 'w+');
+      $url = 'http://download.maxmind.com/app/geoip_download?suffix=tar.gz&license_key=SR8dE3O5K1GM&date=' . $date . '&edition_id=' . $geoip_version;
+      $ch = curl_init($url);
+      // curl_setopt($ch, CURLOPT_TIMEOUT, 50);
+      curl_setopt($ch, CURLOPT_FILE, $fp);
+      curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+      curl_exec($ch);
+      $curl_error = curl_error($ch);
+      curl_close($ch);
+      fclose($fp);
+      if ($curl_error) {
+        watchdog('cs', 'Maxmind db update curl error: %curl_error.', array('%curl_error' => $curl_error), WATCHDOG_ERROR);
+      } else {
+        $phar = new PharData($download);
+        $phar->extractTo($db_dir, null, true);
+        if (rename("$db_dir/$extract_dir/$db_file", $db_path)) { // Atomic write for linux; should not be any problems if open.
+          variable_set('cs_maxmind_last_update', $tuesday);
+          watchdog('cs', 'Maxmind db updated to version %vers.', array('%vers' => $tuesday));
+        }
+        unlink("$db_dir/$extract_dir/COPYRIGHT.txt"); // Empty directory to delete it.
+        unlink("$db_dir/$extract_dir/LICENSE.txt");
+        rmdir("$db_dir/$extract_dir");
+      }
+      if (file_exists($download)) {
+        unlink($download);
+      }
+    } catch (Exception $e) {
+      watchdog('cs', 'Maxmind db update exception: %e.', array('%e' => $e->getMessage()), WATCHDOG_ERROR);
+    }
+  }
+}
+
+
+/**
+ * Determine if module is running the mobile site.
+ */
+function cs_mobile_site() {
+  static $cs_mobile_site;
+  if (!isset($cs_mobile_site)) {
+    $cs_mobile_site = variable_get('cs_mobile_site', false);
+  }
+  return $cs_mobile_site;
+}
+
+
+
+/**
+ * Get or set the location cookie.
+ */
+function cs_location_cookie($new_location = null) {
+  static $cs_location;
+
+  if ($new_location) {
+    $cs_location = $new_location;
+    setcookie('cs_location', serialize($new_location), 0, '/');
+    return $new_location;
+  } elseif (isset($cs_location)) {
+    return $cs_location;
+  } elseif (isset($_COOKIE['cs_location'])) {
+    $cs_location = unserialize($_COOKIE['cs_location']);
+    return $cs_location;
+  } else {
+    return null;
+  }
+}
+
+
+/**
+ * Set the location from the geolocation array: lat, lng, addr.
+ *
+ * Returns the parsed address for display.
+ */
+function cs_location_cookie_from_geolocation($geocode, $sensor = false, $find_nearest_store = true) {
+  $addr = '';
+  
+  if (isset($geocode['addr']) && isset($geocode['lat']) && isset($geocode['lng']) && $geocode['addr']) {
+    
+    $parts = explode(', ', str_replace(', USA', '', $geocode['addr']));
+    $subparts = explode(' ', $parts[count($parts)-1]);
+    $locCookie = array('nid' => -1, 'store' => null, 'timestamp' => REQUEST_TIME, 'sensor' => $sensor,
+      'lat' => floatval($geocode['lat']), 'lng' => floatval($geocode['lng']), 'country' => 'us');
+    if (count($parts) < 3) {
+      $addr = "|{$parts[0]}|";
+      $locCookie['city'] = $parts[0];
+    } else {
+      $addr = "{$parts[0]}|{$parts[1]}|";
+      $locCookie['street'] = $parts[0];
+      $locCookie['city'] = $parts[1];
+    }
+    if (count($subparts) == 1) {
+      $addr .= "{$parts[count($parts)-1]}|";
+      $locCookie['state'] = $parts[count($parts)-1];
+    } else {
+      $addr .= "{$subparts[0]}|{$subparts[1]}";
+      $locCookie['state'] = $subparts[0];
+      $locCookie['zip'] = $subparts[1];
+    }
+    
+    if ($find_nearest_store && $store = cs_nearest_store_node($locCookie['lat'], $locCookie['lng'])) {
+      $locCookie['nid'] = $store->nid;
+      $locCookie['store'] = $store;
+    }
+    
+    cs_location_cookie($locCookie);
+  }
+  return $addr;
+}
+
+
+/**
+ * Return a themed image tag for the store photo.
+ */
+function cs_store_image($store = null, $style = null) {
+  $dir = 'public://store_photos/'; // Must be in public: for theme to work.
+  $file = $store ? $store : 'default_store_photo';
+  $path = $dir . $store . '.jpg';
+  if ($store && !file_exists($path)) {
+    $path = $dir . 'default_store_photo.jpg';
+  }
+  $style = $style ? $style : 'cs_store_default';
+  if (cs_mobile_site()) {
+    $style .= '_mobile'; // Separate in case we want to share the files directory between the main and mobile sites.
+  }
+  return theme_image_style(
+    array(
+      'style_name' => $style,
+      'path' => $path,
+      'width' => 640, // Get an index error without width and height.
+      'height' => 435, // These are the dimensions of the *original* image.
+      'alt' => t('Cellular sales store photo'),
+      'attributes' => array('class' => array('cs-store-photo')),
+    )
+  );
+}
+ 
+
+/**
+ * Find the nearest store to the location. Returns an object with the node ID, distance, and other store properties.
+ */
+function cs_nearest_store_node($lat, $lon) {
+  $res = cs_nearest_stores_query($lat, $lon, 1);
+  $node = $res->fetchAssoc();
+  return $node ? (object)$node : null;
+}
+
+
+/**
+ * Find the nearest stores and return the result set cursor.
+ */
+function cs_nearest_stores_query($lat, $lon, $limit = 5, $where = NULL, $params = array()) {
+  $sql =  "SELECT ss.nid, CONCAT(ss.marketid, '-', ss.loc) AS storecode, l.*, p.phone, ss.geo_accuracy AS geo, ss.t_phone, ss.hours, ss.repair_center ";
+  if ($lat !== NULL && $lon !== NULL) {
+    $sql .= ', ' . earth_distance_sql($lon, $lat, 'l') . ' AS distance '; // Verified this does input checking.
+    $order = ' ORDER BY distance ASC';
+  } else {
+    $order = ' ORDER BY l.name ASC';
+  }
+  $sql .= 'FROM {cs_store} ss ';
+  $sql .= 'INNER JOIN {location_instance} i ON i.nid = ss.nid ';
+  $sql .= 'INNER JOIN {location} l ON i.lid = l.lid ';
+  $sql .= 'LEFT OUTER JOIN {location_phone} p ON p.lid = i.lid ';
+  
+  if ($where) {
+    $sql .= $where;
+  }
+  
+  $sql .= $order;
+
+  if ($limit !== null) {
+    $limit = (int)$limit;
+    if ($limit <= 0) {
+      $limit = 5;
+    }
+  }
+  if ($limit) { // Can't parameterize limit, apparently.
+    $sql .= ' LIMIT ' . $limit;
+  }
+  return db_query($sql, $params);
+}
+
+
+/**
+ * Geolocate the nearest store using the user's IP address. Returns the store's node ID.
+ */
+function cs_nearest_store_by_ip($ipAddr = '') {
+  // First check if user's IP address is already cached.
+  $userInfo = cs_location_cookie();
+  if ($ipAddr || !$userInfo || (isset($userInfo['nid']) && $userInfo['nid'] == -1)) {
+    $ipLoc = cs_geolocate_ip_address($ipAddr);
+    if ($nodeInfo = cs_nearest_store_node($ipLoc->latitude, $ipLoc->longitude)) {
+      // Store user's data into the "location" cookie.
+      $saveData = array(
+        'nid' => $nodeInfo->nid,
+        'store' => $nodeInfo,
+        'country' => $ipLoc->country_code,
+        'street' => '',
+        'state' => $ipLoc->region,
+        'city' => $ipLoc->city,
+        'zip' => $ipLoc->postal_code,
+        'lat' => $ipLoc->latitude,
+        'lng' => $ipLoc->longitude,
+        'timestamp' => REQUEST_TIME,
+        'sensor' => false,
+      );
+      if (!$ipAddr) {
+        cs_location_cookie($saveData);
+      }
+      $nearest_storeID = $nodeInfo->nid;
+    } else $nearest_storeID = -1; // No stores are in the database?
+  } else $nearest_storeID = $userInfo['nid'];
+  return $nearest_storeID;
+}
+
+
+/**
+ * Get a default zip code based on location.
+ */
+function cs_default_zip() {
+  $userInfo = cs_location_cookie();
+  if (!$userInfo) {
+    cs_nearest_store_by_ip(); // Will set the cookie based on IP (or default).
+    $userInfo = cs_location_cookie();
+  }
+  if (isset($userInfo['zip']) && $userInfo['zip']) {
+    $zip = $userInfo['zip'];
+  } else {
+    $zip = '37923'; // Knoxville...
+  }
+  return $zip;
+}
+
+
+/**
+ * Format the store name and address.
+ */
+function cs_format_store_address($store, $check_plain = true, $include_name = true) {
+  $addr = $store->street . ', ' . ucwords(strtolower($store->city)) . ', ' . $store->province . ' ' . $store->postal_code;
+  $addr = trim($addr, ', ');
+  if ($include_name) {
+    $addr = $store->name . ': ' . $addr;
+  }
+  if ($check_plain) {
+    $addr = check_plain($addr);
+  }
+  return $addr;
+}
+
+
+/**
+ * Format the store name and address the right way for Drupal 7+ using render array.
+ */
+function cs_store_markup($store, $image_style = null, $hours = false, $map_link = false) {
+  $ra = array(
+    '#prefix' => '<div class="cs-store" style="margin-top: 15px;">', // Temp style until we have a theme.
+    '#suffix' => '</div>',
+  );
+  if ($image_style !== null) { // Pass empty string for default image style.
+    $ra['image'] = array('#markup' => cs_store_image($store->storecode, $image_style));
+  }
+  $ra['name'] = array('#markup' => check_plain($store->name), '#prefix' => '<div class="cs-store-name">', '#suffix' => '</div>');
+  
+  
+  $store_street = $map_link ? cs_map_store_url($store, $store->street, $map_link) : check_plain($store->street);
+  $ra['street'] = array('#markup' => $store_street, '#prefix' => '<div class="cs-store-address">', '#suffix' => '</div>');
+  if (!empty($store->additional)) {
+    $ra['additional'] = array('#markup' => check_plain($store->additional), '#prefix' => '<p class="cs-store-address">', '#suffix' => '</p>');
+  }
+  $ra['city_state_zip'] = array('#markup' => check_plain(ucwords(strtolower($store->city)) . ', ' . $store->province . ' ' . $store->postal_code ), 
+    '#prefix' => '<div class="cs-store-address">', '#suffix' => '</div>');
+  if (!empty($store->phone)) {
+    $ra['phone'] = array('#markup' => cs_phone_store_url($store, $store->phone), '#prefix' => '<div class="cs-store-phone">', '#suffix' => '</div>');
+  }
+  if (!empty($store->hours) && $hours) { // Store hours already HTML.
+    $ra['hours'] = array('#markup' => $store->hours, '#prefix' => '<div class="cs-store-hours">', '#suffix' => '</div>');
+  }
+  if (!empty($store->repair_center)) {
+    $ra['repair_center'] = array('#markup' => t('Smartphone repair center'), '#prefix' => '<div class="cs-repair-center" style="color: red; font-weight: bold;">', '#suffix' => '</div>');
+  }
+  return $ra;
+}
+
+
+/**
+ * Find the nearest stores based on zip code.
+ */
+function cs_zip_nearest_stores($zip, $form_select = false, $limit = 10) {
+  $addr = cs_format_geolocation_address('', '', '', $zip);
+  $loc = cs_geolocate_address($addr);
+  $stores = array();
+  if ($loc['lat'] && $loc['lng']) {
+    $res = cs_nearest_stores_query($loc['lat'], $loc['lng'], $limit);
+    foreach ($res as $st) {
+      if ($form_select) {
+        $stores[$st->storecode] = cs_format_store_address($st);
+     } else {
+        $stores[$st->storecode] = $st;
+      }
+    }
+  }
+  return $stores;
+}
+
+
+/**
+ * Implements hook_block_info().
+ */
+function cs_block_info() {
+  $blocks['store_locator'] = array(
+    'info' => t('Store locator'),
+    'cache' => DRUPAL_CACHE_PER_ROLE, // Drupal default. Note Drupal does *no* block caching for user 1.
+    'status' => 1,
+    'weight' => 0,
+    'region' => BLOCK_REGION_NONE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages' => "<front>", // \n separated list
+  );
+  // Difference is layout and the one above has a form. Nearest store just a link to the form.
+  $blocks['nearest_store'] = array(
+    'info' => t('Nearest store'),
+    'cache' => DRUPAL_CACHE_PER_ROLE,
+    'status' => 1,
+    'weight' => 0,
+    'region' => BLOCK_REGION_NONE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages' => "", // \n separated list
+  );
+  $blocks['market_locations'] = array(
+    'info' => t('Market locations'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+    'status' => 1,
+    'weight' => 0,
+    'region' => BLOCK_REGION_NONE,
+    'visibility' => BLOCK_VISIBILITY_LISTED,
+    'pages' => "market/*", // \n separated list
+  );
+  return $blocks;
+}
+
+
+/**
+ * Implements hook_block_view().
+ *
+ * Should be redone as a render array, but will have to wait for another day.
+ */
+function cs_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'store_locator':
+    case 'nearest_store':
+      $nearest = $delta == 'nearest_store'; // Version without the form.
+      $block['subject'] = t('Location nearest you');
+      $nearest_store_id = cs_nearest_store_by_ip();
+      $out = '<div id="cs-nearest-store" class="cs-store-address">';
+      if ($nearest_store_id == -1) {
+        $out .= cs_store_image() . '</div>';
+      } else {
+        $cookie = cs_location_cookie();
+        $store = $cookie['store'];
+        if ($nearest) $out .= cs_store_image($store->storecode); // Put store first.
+        $out .= $store->name . '<br />';
+        $out .= $store->street . '<br />';
+        if (!empty($store->additional)) $out .= '<span class="cs-address-addional">(' . $store->additional . ')</span><br />';
+        $out .= $store->city . ', ';
+        $out .= $store->province . ' ';
+        $out .= $store->postal_code . '<br />';
+        if (!empty($store->phone)) $out .= $store->phone;
+        if (!$nearest) $out .= cs_store_image($store->storecode);
+        $out .= '</div>'; // End of content we will need to refresh.
+        if ($nearest) {
+          $out .= l('Select a different store', 'storelocator');
+        } else {
+          $out .= '<p>Find another location.</p>';
+          $form = drupal_get_form('cs_store_locator_block_form');
+          $out .= drupal_render($form);
+        }
+      }
+      $block['content'] = array(
+        '#markup' => $out,
+        '#attached' => array(
+          'js' => array(
+            'http://maps.google.com/maps/api/js?sensor=true' => array('type' => 'external'),
+            drupal_get_path('module', 'cs') . '/cs.js'
+            ),
+          // Works, but had issues and no cookie removal function; just kept custom functions.
+          // 'library' => array(array('system', 'jquery.cookie')),
+        ),
+      );
+      break;
+    
+    case 'market_locations':
+      $markets = cs_markets();
+      $out = array();
+      $loc = explode('/', request_path());
+      $market = '';
+      if ($loc) { // Last component of the path must be market name or code.
+        $loc = $loc[count($loc) - 1];
+        $loc = str_replace('-', ' ', $loc);
+        $loc = strtoupper($loc);
+        foreach ($markets as $code => $name) {
+          if ($loc == $code || $loc == strtoupper($name)) {
+            $market = $code;
+            break;
+          }
+        }
+      }
+      if ($market && isset($markets[$market])) {
+        $block['subject'] = t('@market area locations', array('@market' => $markets[$market]));
+        $where = 'WHERE ss.marketid = :marketid';
+        $params = array(':marketid' => $market);
+        $stores = cs_nearest_stores_query(null, null, null, $where, $params);
+        foreach ($stores as $store) {
+          $out[$store->storecode] = cs_store_markup($store);
+        }
+      }
+      $block['content'] = $out;
+      break;
+  }
+  return $block;
+}
+
+
+
+/**
+ * Ajax entry point to refresh the block on a cached page.
+ * See cs.js for JavaScript implementation.
+ */
+function cs_refresh_block($delta = '') {
+  // watchdog('cs', 'refresh_block %block.', array('%block' => $delta));
+  $location = drupal_get_query_parameters();
+  if ($location) { // See if they sent a location from browser or GPS.
+    cs_location_cookie_from_geolocation($location, true);
+  }
+  $result = '';
+  $block = module_invoke('cs', 'block_view', $delta);
+  if (isset($block['content']['#markup'])) {
+    $result = $block['content']['#markup'];
+    if (preg_match("/<div.*?>(.*?)<\/div>/", $result, $match) == 0) {
+      $result = '';
+    } else {
+      $result = $match[1];
+    }
+  }
+  print $result;
+  exit();
+}
+
+
+
+/**
+ * Implements hook_boot().
+ *
+ * To make this work for mobile device detection we added a hook_boot function to the browscap module in order to use it at boot time:
+ * function browscap_boot() {} // desoi - Added to make this module available at boot time for mobile detection.
+ * hook_init would be better, but that does not work on cached pages.
+ *
+ */
+function cs_boot() {
+  $host = $_SERVER['HTTP_HOST'];
+  if (isset($_COOKIE['cs_mobile_redirect']) || stripos($host, 'm.') === 0) {
+    return;
+  }
+  if (isset($_SERVER['QUERY_STRING']) && stripos($_SERVER['QUERY_STRING'], 'nomobi=1') !== false) {
+    setcookie('cs_mobile_redirect', '1', 0, '/');
+    return;
+  }
+  if (function_exists('browscap_get_browser')) {
+    $browser = browscap_get_browser();
+  } else {
+    $browser = array();
+  }
+  if (isset($browser['ismobiledevice']) && ($browser['ismobiledevice'] === 'true' || $browser['ismobiledevice'] == '1')) {
+    $paths = array('signup', 'register'); // Don't redirect to mobile if we will redirect to the info site anyway.
+    if ($_SERVER['REQUEST_METHOD'] == 'GET' && array_search($_GET['q'], $paths) !== false) {
+      return;
+    }
+    setcookie('cs_mobile_redirect', '1', 0, '/');
+    if (stripos($host, 'localhost') === 0) {
+      $redirect = 'http://127.0.0.1:8888'; // Local testing.
+    } else if (stripos($host, 'dev1cs.com') !== false) { // Dev server.
+      $redirect = 'http://m.dev1cs.com';
+    } else {
+      $redirect = 'http://m.cellularsales.com';
+    }
+    header('Location: ' . $redirect, TRUE, 302); // drupal_goto not loaded at boot time.
+    exit;
+  }
+}
+
+/**
+ * Implements hook_init().
+ *
+ * Handle cache issues for store locator page if no parameters. Ensures cached page is not used.
+ */
+function cs_init() {
+  $paths = "storelocator\r\nstorelocator2";
+  if ($_SERVER['REQUEST_METHOD'] == 'GET' && drupal_match_path($_GET['q'], $paths)) {
+    drupal_page_is_cacheable(false);
+  }
+}
+
+
+/**
+ * Function to geolocate a store or user address using Google's geocode API.
+ */
+function cs_geolocate_address($addr, $admin = false) {
+  if (is_array($addr)) {
+    $addr = cs_format_geolocation_address($addr);
+  }
+  $cache_key = 'cs:geocode:' . $addr; // Assumes address is normalized and sanitized by cs_format_geolocation_address.
+  $cache = cache_get($cache_key);
+  if ($cache && is_array($cache->data)) {
+    return $cache->data;
+  }
+  
+  $retVal = array ('lat' => 0.0, 'lng' => 0.0, 'acc' => 0, 'addr' => '', 'resultCnt' => -1);
+  
+  $ua = $_SERVER['HTTP_USER_AGENT'];
+  if (strpos($ua, 'Googlebot') !== false || strpos($ua, 'TARGUSinfo Web Crawler') !== false) {
+    watchdog('cs', 'Ignoring bot or crawler request: %ua', array('%ua' => $ua));
+    return $retVal;
+  }
+  
+  // Must be a bot if they don't have a location cookie; set on pages we show this form.
+  if (!$admin && !cs_location_cookie()) {
+    watchdog('cs', 'Ignoring post with no location cookie: %ua', array('%ua' => $ua));
+    return $retVal;
+  }
+  
+  // They have a cookie, so track time between requests and ignore if they make too many too fast.
+  if (!$admin) {
+    $now = $_SERVER['REQUEST_TIME'];
+    if (empty($_SESSION['cs_geocode_last_time'])) {
+      $_SESSION['cs_geocode_count'] = 1;
+    } else if ($now - $_SESSION['cs_geocode_last_time'] <= 10) {
+      $_SESSION['cs_geocode_count']++;
+    } else {
+      $_SESSION['cs_geocode_count'] = 1;
+    }
+    $_SESSION['cs_geocode_last_time'] = $now;
+    if ($_SESSION['cs_geocode_count'] >= 8) {
+      watchdog('cs', 'Ignoring rapid geoquery requests (%count): %ua', array('%ua' => $ua, '%count' => $_SESSION['cs_geocode_count']));
+      return $retVal;
+    }
+  }
+  
+  $service_url = 'http://maps.googleapis.com/maps/api/geocode/xml?sensor=false&address=';
+  $http_reply = drupal_http_request($service_url . urlencode($addr));
+  if ($http_reply->code != 200) {
+    watchdog('cs', 'Geocode http error %code: %error.', array('%code' => $http_reply->code, '%error' => $http_reply->error), WATCHDOG_ERROR);
+    return $retVal;
+  }
+  
+  //Check the status
+  preg_match('/<status>(.*)<\/status>/', $http_reply->data, $match);
+  if ($match[1] == 'OK') {
+    // Count the number of locations returned.
+    $retVal['resultCnt'] = preg_match_all("/(<\/result>)/", $http_reply->data, $match, PREG_SET_ORDER);
+    // Find the lat & lng.
+    if (preg_match('/<location>\s*<lat>(.*)<\/lat>\s*<lng>(.*)<\/lng>\s*<\/location>/', $http_reply->data, $match)) {
+      $retVal['lat'] = floatval($match[1]);
+      $retVal['lng'] = floatval($match[2]);
+    }
+    // Accuracy. Old API gave a number 0 - 9. This is an approximation of that.
+    if (preg_match('/<location_type>(.*)<\/location_type>/', $http_reply->data, $match)) {
+      switch($match[1]) {
+        case 'ROOFTOP':
+          $retVal['acc'] = 9;
+          break;
+        case 'RANGE_INTERPOLATED':
+          $retVal['acc'] = 6;
+          break;
+        case 'GEOMETRIC_CENTER':
+          $retVal['acc'] = 3;
+          break;
+        default: // APPROXIMATE should be the only other value.
+          $retVal['acc'] = 1;
+      }
+    }
+    // Find the formatted address.
+    preg_match("/<formatted_address>(.*)<\/formatted_address>/", $http_reply->data, $match);
+    $retVal['addr'] = substr($match[1], 0, strrpos($match[1], ','));  // Remove the "USA" part.
+    cache_set($cache_key, $retVal, 'cache', time() + 86400); // Cache 1 day.
+  } else if ($match[1] != 'ZERO_RESULTS') { // Log for review.
+    watchdog('cs', 'Geocode error %result on query %query.', array('%result' => $match[1], '%query' => print_r($addr, true)));
+  }
+  return $retVal;
+}
+
+
+
+
+
+/**
+ * Store locator form.
+ */
+function cs_store_locator_form() {
+  $form['street'] = array(
+    '#type' => 'textfield',
+    '#maxlength' => 120,
+    '#size' => 25,
+    '#title' => t('Your Street'),
+  );
+  $form['city'] = array(
+    '#type' => 'textfield',
+    '#maxlength' => 100,
+    '#size' => 20,
+    '#title' => t('City'),
+  );
+  $form['state'] = array(
+    '#type' => 'textfield',
+    // '#autocomplete_path' => 'location/autocomplete/us',
+    '#maxlength' => 64,
+    '#size' => 20,
+    '#title' => t('State'),
+  );
+  $form['zip'] = array(
+    '#type' => 'textfield',
+    '#maxlength' => 20,
+    '#size' => 10,
+    '#title' => t('Zip'),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('GO'),
+    '#prefix' => "<div id='submitBtnDiv'>",
+    '#suffix' => "</div>",
+  );
+  return $form;
+}
+
+
+function cs_store_locator_form_submit($form, &$form_state) {
+  cs_process_store_location_submission($form_state);
+}
+
+
+function cs_store_locator_form_validate($form, &$form_state) {
+  $form_state['values']['street'] = trim($form_state['values']['street']);
+  $form_state['values']['city'] = trim($form_state['values']['city']);
+  $form_state['values']['state'] = trim($form_state['values']['state']);
+  $form_state['values']['zip'] = trim($form_state['values']['zip']);
+  if ($form_state['values']['zip'] == '' && $form_state['values']['state'] == '' && $form_state['values']['city'] == '' && $form_state['values']['street'] == '') {
+    form_set_error('', t('Please enter one or more values to search for a store.'));
+  }
+}
+
+
+/**
+ * Store locator block form.
+ */
+function cs_store_locator_block_form() {
+  // drupal_add_js(drupal_get_path('module', 'location') .'/location_autocomplete.js');
+  
+  $form['city'] = array(
+    '#type' => 'textfield',
+    '#maxlength' => 100,
+    '#size' => 20,
+    '#title' => t('City'),
+  );
+  $form['state'] = array(
+    '#type' => 'textfield',
+    // '#autocomplete_path' => 'location/autocomplete/us',
+    '#maxlength' => 64,
+    '#size' => 15,
+    '#title' => t('State'),
+  );
+  $form['zip'] = array(
+    '#type' => 'textfield',
+    '#maxlength' => 20,
+    '#size' => 7,
+    '#title' => t('Zip'),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('See More'),
+  );
+  $form['#action'] = '/storelocator_block';
+  $form['#method'] = 'post';  
+  return $form;
+}
+
+
+/**
+ * This is now the submit URL for the block search. Issue is we need the post URL to be the same, not the URL
+ * the block displayed on. Needs to be a single URL so we can exclude googlebot from submitting and using up all of our geoqueries.
+ */
+function cs_store_locator_block_form_submit($form = null, &$form_state = null) {
+  if (!is_array($form_state)) {
+    $form_state['values'] = isset($_POST['form_id']) && $_POST['form_id'] == 'cs_store_locator_block_form' ?
+      array('city' => $_POST['city'], 'state' => $_POST['state'], 'zip' => $_POST['zip']) :
+      array('city' => '', 'state' => '', 'zip' => '');
+  }
+  if (empty($form_state['values']['city']) && empty($form_state['values']['state']) && empty($form_state['values']['zip'])) {
+    drupal_goto('storelocator');
+  } else {
+    cs_process_store_location_submission($form_state);
+  }
+}
+
+
+/**
+ * Process request from main or block form.
+ */
+function cs_process_store_location_submission(&$form_state) {
+  $form_state['values']['city'] = trim($form_state['values']['city']);
+  $form_state['values']['state'] = trim($form_state['values']['state']);
+  $form_state['values']['zip'] = trim($form_state['values']['zip']);
+  
+  $geocode = cs_geolocate_address($form_state['values']);
+  $addr = cs_location_cookie_from_geolocation($geocode, false, false); // Store lookup will be on redirect.
+  
+  // Find the page name - Needed to maintain the page alias "storelocator2"
+  $curr_uri = explode('/', check_plain(request_uri()));
+  foreach ($curr_uri as $key => $value) if ($pgName = $value) break;  // Must skip over null values
+  if (!in_array(strtolower($pgName), array('storelocator2', 'ainge'))) $pgName = 'storelocator';  // Other aliases are dropped.
+  //Decoded -> Now jump to the page to display
+  $pageURL = "{$pgName}/".urlencode($geocode['lat']).'/'.urlencode($geocode['lng']).'/'.urlencode($addr).($geocode['resultCnt'] > 1 ? '/'.$geocode['resultCnt'] : '');
+  drupal_goto($pageURL);
+}
+
+
+
+
+
+/**
+ * Return special branding for the store locator page.
+ */
+function cs_store_locator_branding() {
+  // Add branding based on the URL. This is hardcoded for now but could be implemented as a general feature if there are more.
+  $brand = '';
+  if (stripos(request_uri(), '/ainge') === 0) {
+    // $brand .= '<div style="font-size: 18px; line-height: 22px; text-align: center;">';
+    $brand .= '<div id="cs-store-locator-branding">';
+    $brand .= '<p>Check your upgrade eligibility.</p>';
+    $brand .= '<p>Setup a no-wait appointment.</p>';
+    $brand .= '<p>Call 877-851-6201.</p>';
+    // $brand .= '<p>To set a no-wait appointment at any of the Verizon Wireless<br>Cellular Sales locations, call <strong>877-851-6201</strong>.</p>';
+    // $brand .= '<p style="margin-top: 1em">Come back soon for specials for TN Sports Radio fans!</p>';
+    // $brand .= '<img alt="Tennessee Sports Radio" src="/sites/default/files/tsrmainlogo.jpg" style="width: 400px; height: 167px;">';
+    $brand .= '</div>';
+  }
+  return $brand;
+}
+
+
+/**
+ * Setup markers for the default location.
+ */
+function cs_init_location_markers(&$lat = null, &$lon = null, $addr = '') {
+  $icon = 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=%C2%B7' . urlencode('|0267FE|000000');
+  $markers[0] = array('nid' => null, 'title' => 'Your location', 'icon' => $icon, 'distance' => 0);
+  $html = '';
+  if ($lat == NULL) {
+    // No values given - Use the geocoded IP address values.
+    if (!$userInfo = cs_location_cookie()) {
+      // No value for IP address stored which means they went directly to this page, skipping the home page.
+      if (cs_nearest_store_by_ip() == -1) {
+        // Nothing found - location unknown.
+        $lat = 37.696987;
+        $lon = -91.809567;
+        $html = '<b>Your location:</b>&nbsp;&nbsp;Unknown.<br />Please enter an address.';
+      } else {
+        // Now get the value from the cookie.
+        $userInfo = cs_location_cookie();
+        $lat = $userInfo['lat'];
+        $lon = $userInfo['lng'];
+      }
+    } else {
+      $lat = $userInfo['lat'];
+      $lon = $userInfo['lng'];
+    }
+  } else {
+    // Process the parameters.
+    $lat = floatval($lat);
+    $lon = floatval($lon);
+    $addr = explode('|',urldecode($addr));
+    $addrHtml = '<b>Your location:</b><br />';
+    if (isset($addr[0]) && $addr[0]) $addrHtml .= $addr[0] . '<br />';  // Street
+    if (isset($addr[1]) && $addr[1]) $addrHtml .= $addr[1] . ', ';  // City
+    if (isset($addr[2]) && $addr[2]) $addrHtml .= $addr[2] . ' ';  // State
+    if (isset($addr[3]) && $addr[3]) $addrHtml .= $addr[3]; // Zip
+    $html = $addrHtml;
+  }
+  
+  if (!$html && $userInfo) {
+    $country = '';
+    $user_country = $userInfo['country'];
+    if (($user_country != 'US' && $user_country != 'us') || (empty($userInfo['city']) && empty($userInfo['state']) && empty($userInfo['zip']))) {
+      include_once(drupal_get_path('module', 'cs') . '/geoip/geoip.inc');
+      if (class_exists('GeoIP')) {
+        $gi = new GeoIP;
+        $cnum = empty($gi->GEOIP_COUNTRY_CODE_TO_NUMBER[$user_country]) ? null : $gi->GEOIP_COUNTRY_CODE_TO_NUMBER[$user_country];
+        $country = $cnum === null ? '' : $gi->GEOIP_COUNTRY_NAMES[$cnum];
+      } else {
+        $country = $userInfo['country'];
+      }
+      $markers[0]['zoom'] = 8;
+    }
+    if (empty($userInfo['city']) && empty($userInfo['state']) && empty($userInfo['zip'])) {
+      $html = "<b>Your location:</b>&nbsp;&nbsp;{$country}";
+    } else {
+      $html = "<b>Your location:</b><br />{$userInfo['city']}, {$userInfo['state']}" . (empty($userInfo['zip']) ? '' : " {$userInfo['zip']}") . (empty($country) ? '' : ", {$country}");
+    }
+  }
+  
+  $markers[0]['lat'] = $lat;
+  $markers[0]['lon'] = $lon;
+  $markers[0]['html'] = $html;
+  return $markers;
+}
+
+// Nytech
+
+/**
+ * Main store locator page.
+ */
+function cs_store_locator_page($lat = NULL, $lon = NULL, $addr = NULL, $err = NULL) {
+  // drupal_add_css( drupal_get_path('module','storeloc') . "/storeloc.css" );
+  $markers = cs_init_location_markers($lat, $lon, $addr);
+  $isGeoAdmin = user_access('edit any store content');
+  $nearby_stores = cs_nearest_stores_query($lat, $lon, 15);
+
+  $page = '<div class="col-sm-3">' . "<div id='cs-store-list'>\n";
+  if ($err) $page .= "<div id='geocode_err'>There were {$err} results for the address<br />entered. Please refine your address.</div>";
+  $icon_html = htmlspecialchars($markers[0]['icon']);
+  $page .= "<div class='cs-store-address'><img class='cs-store-address-marker' id='storeloc_mark0' src='{$icon_html}' alt='Your location' />";
+  $page .= "{$markers[0]['html']}</div>";
+  $page .= "<p>Five Nearest Locations:</p>";
+  $cnt = 0;
+  $repair_pin = url('sites/default/files/service_center_pin.png', array('absolute' => true));
+  if (stripos($repair_pin, 'localhost')) { // Has to be accessible to google to generate the map.
+    $repair_pin = 'http://dev1cs.com/sites/default/files/service_center_pin.png';
+  }
+  
+  foreach ($nearby_stores as $store) {
+    $cnt++;
+    //print_r($store);
+    $dist = round($store->distance * METER_2_MI, 1);
+    // The rest of the cookie values were set in the form submission, but we did not have the nearest store yet.
+    if ($cnt == 1) {
+      $locCookie = cs_location_cookie();
+      if ($locCookie['nid'] == -1) {
+        $locCookie['nid'] = $store->nid;
+        $locCookie['store'] = $store;
+        // $locCookie['store_dist'] = $dist;
+        cs_location_cookie($locCookie);
+      }
+    }
+    // Only show the addresses of the first 5 stores; the rest are just clickable markers.
+    if ($cnt < 6) {
+      $repair_center = !empty($store->repair_center);
+      $icon = $repair_center ? $repair_pin : "http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=" . urlencode(chr($cnt+64) . "|FF766A|000000");
+      $icon_html = htmlspecialchars($icon);
+      $page .= "<div class='cs-store-address'><img class='cs-store-address-marker' id='storeloc_mark{$cnt}' src='{$icon_html}' alt='" . htmlspecialchars($store->name) . "' ";
+      if ($isGeoAdmin) $page .= "title='" . $store->storecode ."' ";
+      $page .= ' />';
+    } else { 
+      $icon = null; 
+    }
+	
+	
+    $addrHtml =  '<b>' . $store->name . '<b><span style="display:none;visibility:hidden">NID-' . $store->nid . '</span>';
+    $addrHtml .= "<br />" . $store->street . "<br />";
+    if (!empty($store->additional)) $addrHtml .= "<span class='cs-address-additional'>(" . $store->additional . ")</span><br />";
+    $addrHtml .= ucwords(strtolower($store->city)) . ", " . $store->province . " " . $store->postal_code . "<br />";
+    if (!empty($store->phone)) $addrHtml .= $store->phone . "<br />";
+    if (!empty($store->hours)) $addrHtml .= $store->hours . "<br />";
+    $addrHtml .= "Approximately <b>{$dist}</b> miles.";
+    if($repair_center)  {
+    	$store_link = 'Smartphone repair center'; 
+		$store_node = node_load($store->nid);
+		if(!empty($store_node->field_store_page_url)) {
+			$store_link = '<a style="color: red; font-weight: bold;" href="' . $store_node->field_store_page_url['und'][0]['value'] . '">Smartphone repair center</a>';
+		}
+    	$addrHtml .= '<br /><span class="cs-repair-center">' . $store_link . '</span>';
+	}
+    if ($cnt < 6) {
+      $page .= $addrHtml . '</div>';
+      // Insert into the display the available dealers.
+      if (module_exists("dealerportal")) {
+        if ($dealerArr = dealerportal_storedealers($store->nid)) {
+          $addrHtml .= "<br /><br />Available in-store experts:<ul class='storeDealerList'>";
+          foreach ($dealerArr as $dealer) $addrHtml .= "<li>" . $dealer . "</li>";
+          $addrHtml .= "</ul>";
+        }
+      }
+    }
+    $stImg = cs_store_image($store->storecode, 'cs_store_thumbnail');
+    $markers[$cnt] = array(
+      'nid' => $store->nid,
+      'icon' => $icon,
+      'html' => '<div class="cs-store-address">' . $stImg . $addrHtml . '</div>',
+      'lon' => $store->longitude,
+      'lat' => $store->latitude,
+      'title' => $store->name,
+      'distance' => $dist,
+    );
+  }
+  $page .= "</div></div>";
+
+  
+  if ($cnt == 0) {
+    $page = "<div id='cs-store-list'>There are no locations available in your area.</div>";
+  }
+  if ($branding = cs_store_locator_branding()) {
+    $page = $branding . $page;
+  }
+  $form = drupal_get_form('cs_store_locator_form');
+  $page = drupal_render($form) . $page;
+  $page .= cs_add_map($markers, 10);
+  return $page;
+}
+
+
+
+/**
+ * Return the google API key for google maps.
+ */
+function cs_maps_api_key($script_tag = false, $sensor = false) {
+  static $maps_api_key;
+  if (!isset($maps_api_key)) {
+    $maps_api_key = variable_get('location_geocode_google_apikey', 'AIzaSyA8_kHJW9cEPZPm2LmbaDq5uSyST2RbF6Y'); // New CS v3 key 2013-10-06
+  }
+  if ($script_tag) {
+    $sensor = $sensor ? 'true' : 'false';
+    return "<script type='text/javascript' src='http://maps.googleapis.com/maps/api/js?sensor=$sensor&amp;key=$maps_api_key'></script>";
+  } else {
+    return $maps_api_key;
+  }
+}
+
+
+/**
+ * HTML and javascript to generate the Google Map.
+ * 
+ * $max_distance is the furthest distance allowed at the default zoom level. The map is zoomed out if none of the points are <= $max_distance from the center.
+ */
+function cs_add_map($markers, $max_distance = 0, $zoom = 12) {
+  $map = '<div class="col-sm-9">' . "<div id='googmap'>JavaScript is required to view the map.</div></div>";
+  $map .= cs_maps_api_key(true);
+  
+  drupal_add_js(array(
+    'cs_map' => array(
+      'markers' => $markers,
+      'max_distance' => $max_distance,
+      'zoom' => $zoom,
+    )), 'setting');
+  drupal_add_js(drupal_get_path('module', 'cs') . '/maps.js'); // Use line below for development to disable caching.
+  // drupal_add_js(drupal_get_path('module', 'cs') . '/maps.js', 'module', 'header', false, false);
+  return $map;
+}
+
+
+/**
+ * Generate map url or link to a store. This is an external link to maps.google.com.
+ * 
+ * A url rather than a link is returned if no link name is provided.
+ */
+function cs_map_store_url($store, $link = '', $directions_from = '') {
+  $addr = urlencode($store->street . ' ' . $store->city . ' ' . $store->province . ' ' . $store->postal_code);
+  if ($directions_from) {
+    $url = '/dir/' . urlencode($directions_from) . '/' . $addr;
+    $title = t('Directions to @name store.', array('@name' => $store->name));
+  } else {
+    $url = '/place/' . $addr;
+    $title = t('Show @name store on a map.', array('@name' => $store->name));
+  }
+  $url = 'https://maps.google.com/maps' . $url;
+  
+  if ($link) {
+    $link = check_plain($link);
+    return "<a href='$url' target='_blank' title='$title'>$link</a>";
+  } else {
+    return $url;
+  }
+}
+
+
+/**
+ * Generate phone url or link for a store. Generally only useful for mobile browsers.
+ * 
+ * A url rather than a link is returned if no link name is provided.
+ */
+function cs_phone_store_url($store, $link = '') {
+  $tel = 'tel:+1' . preg_replace('/[^0-9]/', '', $store->phone);
+  if ($link) {
+    $title = t('Call @name store.', array('@name' => $store->name));
+    $link = check_plain($link);
+    return "<a href='$tel' title='$title'>$link</a>";
+  } else {
+    return $tel;
+  }
+}
+
+
+
+
+/**
+ * Lookup the store by store code.
+ */
+function cs_store_by_code($code) {
+  $code = strtoupper(str_replace('_', '-', $code)); // Allow lower and underscore instead of dash.
+  $store = null;
+  $stCode = explode('-', $code);
+  if (strlen($stCode[0]) <= 3 && isset($stCode[1]) && strlen($stCode[1])<=3) {
+    $where = 'WHERE ss.marketid = :marketid AND ss.loc = :loc AND ss.nid <> -1';
+    $params = array(':marketid' => $stCode[0], ':loc' => $stCode[1]);
+    $store = cs_nearest_stores_query(null, null, 1, $where, $params)->fetchAssoc();
+    $store = $store ? (object)$store : null;
+    $storeCode = $stCode[0] . '-' . $stCode[1];
+  }
+  return $store;
+}
+
+
+
+/**
+ * Page for a specific store by store code, e.g. KX-CB.
+ */
+function cs_store_page($storeQuery) {
+  $store = cs_store_by_code($storeQuery);
+  if (!$store) {
+    return MENU_NOT_FOUND;
+  }
+  $storeCode = $store->storecode;
+  $foundStores = cs_nearest_stores_query($store->latitude, $store->longitude, 15);
+  $page =  '<div class="col-sm-3">' . "<div id='cs-store-list'>";
+  $storeCnt = 1;
+  $cnt = 0;
+  $isGeoAdmin = user_access('edit any store content');
+  foreach ($foundStores as $storeLst) {
+    $stImg = cs_store_image($storeLst->storecode, 'cs_store_thumbnail');
+    $storeLst->name = ucwords(strtolower($storeLst->name)); // Title case everything except state and zip.
+    $storeLst->city = ucwords(strtolower($storeLst->city));
+    $storeLst->street = ucwords(strtolower($storeLst->street));
+    $storeLst->additional = ucwords(strtolower($storeLst->additional));
+    $cnt += 1;
+    $addrHtml = '<span class="cs-store-name">' . $storeLst->name . '</span>';
+    if ($cnt <= $storeCnt && $isGeoAdmin) {
+      $addrHtml .= "&nbsp;&nbsp;<a href='/node/{$storeLst->nid}/edit'>(edit)</a>";
+    }
+    $sideShort = $addrHtml;  // Used for when there are too many matches - short links.
+    $addrHtml .= "<br />" . $storeLst->street . "<br />";
+    if (!empty($storeLst->additional)) $addrHtml .= "<span class='cs-address-additional'>(".$storeLst->additional . ")</span><br />";
+    $addrHtml .= $storeLst->city . ", " . $storeLst->province . " " . $storeLst->postal_code . "<br />";
+    $sideShort .= "<br />" . $storeLst->city . ", " . $storeLst->province . " " . $storeLst->postal_code;
+    if (!empty($storeLst->phone)) $addrHtml .= $storeLst->phone . "<br />";
+    if (!empty($storeLst->hours)) $addrHtml .= $storeLst->hours . "<br />";
+    if (!empty($store->repair_center)) $addrHtml .= "<span class='cs-repair-center' style='color: red; font-weight: bold;'>Smartphone repair center</span><br />";
+    $distance = isset($storeLst->distance) ? round($storeLst->distance * METER_2_MI, 1) : -1;
+    if ($cnt > $storeCnt) {
+      // Nearest stores to the single store match.
+      if ($distance >= 0) {
+        $addrHtml .= "<br />Approximately <b>" . $distance . "</b> miles";
+      }
+      if ($locStoreName!=NULL) $addrHtml .= " from<br />the {$locStoreName} store.";
+      else $addrHtml .= ".";
+    } else {
+      $locStoreName = check_plain($storeLst->name);
+      drupal_set_title(t("{$locStoreName} - Cellular Sales, Verizon Wireless Retailer"));
+      $storeAddress = check_plain($storeLst->street . ($storeLst->additional ? ', ' . $storeLst->additional : '' ) .  ', ' . $storeLst->postal_code);
+      $storeCity = check_plain($storeLst->city);
+      $meta = '<meta name="description" content="' . t("{$storeCity} Verizon Wireless location. {$locStoreName} store is located at {$storeAddress} and is a full-service Verizon location.");
+      $meta .= t(" Bill payments, upgrades, new lines of service, Mobile Broadband Internet solutions and more.") . '" />';
+      drupal_add_html_head($meta);
+      
+      $page .= "<div class='cs-store-address'>";
+      $page .= "<img class='cs-store-address-marker' id='storeloc_mark" . ($cnt-1) . "' width='23' height='39' src='" . htmlspecialchars(MAP_HOME_ICON) . "' ";
+      if ($isGeoAdmin) $page .= "title='" . $storeLst->storecode ."' ";
+      $page .= " />";
+      $page .= ($storeCnt > 7 ? $sideShort : $addrHtml);
+      $page .= "</div>";
+    }
+    $markers[$cnt-1] = array(
+      'nid' => $storeLst->nid,
+      'lon' => $storeLst->longitude,
+      'lat' => $storeLst->latitude,
+      'title' => $storeLst->name,
+      // 'html' => "<table cellspacing='0' cellpadding='0'><tr><td style='padding-right:15px;'><img width='100' height='110' src='{$stImg}' /></td><td valign='top'>{$addrHtml}</td></tr></table>",
+      'html' => '<div class="cs-store-address">' . $stImg . $addrHtml . '</div>',
+      'icon' => MAP_HOME_ICON,
+      'distance' => $distance,
+    );
+  }
+  $page .= "</div></div>";
+  $page .= cs_add_map($markers, -1);
+  
+  $desc = '<p>';
+  $desc .= t("Our {$locStoreName} location is a full-service store for Verizon Wireless products and service.");
+  $desc .= t(" The newest 4G/LTE smartphones, devices and tablets are available locally in {$storeCity}.");
+  $desc .= t(" Come experience the speed of 4G/LTE, pay your bill or get a personalized rate plan analysis. Our {$locStoreName} reps are standing by to help you.");
+  $desc .= '</p>';
+  $page = $desc . $page;
+  
+  if ($storeCode && $testimony = cs_store_testimonials($storeCode)) {
+    $page .= '<h3 class="testimonial" style="clear: both;">' . t('Here is what ' . $locStoreName . ' customers are saying:' ) . '</h3>';
+    foreach ($testimony as $item) {
+      node_build_content($item, 'teaser');
+      $page .= drupal_render($item->content);
+      $page .= '<p></p>';
+    }
+  }
+
+  return $page;
+}
+
+
+/**
+ * Find customer testimonials for the store code. Assumes store code is formated MM-XX.
+ */
+function cs_store_testimonials($store_code) {
+  $query = new EntityFieldQuery();
+  $query
+    ->entityCondition('entity_type', 'node')
+    ->entityCondition('bundle', 'customer_testimonial')
+    ->fieldCondition('field_store_code', 'value', $store_code, '=');
+  $res = $query->execute();
+  $ids = isset($res['node']) ? array_keys($res['node']) : array();
+  return $ids ? entity_load('node', $ids) : array();
+}
+
+
+/**
+ * Listing of all store locations.
+ */
+function cs_locations_page() {
+  $out = array();
+  $count = db_query('SELECT count(*) FROM {cs_store} WHERE opened <> 0')->fetchField();
+  if ($count) {
+    $num_per_page = 100;
+    $page = pager_default_initialize($count, $num_per_page);
+    $offset = $num_per_page * $page;
+    $sql = "SELECT l.name, l.city, l.province, ss.marketid, ss.loc
+      FROM {cs_store} ss
+      INNER JOIN {location_instance} i ON i.nid = ss.nid
+      INNER JOIN {location} l ON i.lid = l.lid
+      WHERE ss.opened <> 0
+      ORDER BY ss.marketid, l.name";
+    $res = db_query_range($sql, $offset, $num_per_page);
+    $group = array(); // Need to know how many are in each group to break correctly.
+    foreach ($res as $store) {
+      $group[$store->marketid][] = $store;
+    }
+    $out[] = array('#markup' => '<table><tr style="vertical-align: top;"><td>');
+    $item = 0;
+    $num_per_col = $num_per_page / 2;
+    $break = $num_per_col;
+    $br_markup = array('#markup' => '</td><td>');
+    $cs_markets = cs_markets();
+    foreach ($group as $marketid => $stores) {
+      $group_count = count($stores);
+      if ($break && $item + 3 > $break && $group_count > 5) { // Don't put just a couple at the bottom.
+        $out[] = $br_markup;
+        $break = 0; // Assuming 1 break for 2 col format.
+      } else if ($break && $item + $group_count > $break) {
+        $diff = $group_count + $item - $break;
+        if ($diff <= 3) { // Finish the group if <= 3 remaining.
+          $break = $break + $diff;
+        }
+      }
+      $market_name = isset($cs_markets[$marketid]) ? $cs_markets[$marketid] : $marketid;
+      $out[] = array('#markup' => $market_name, '#prefix' => '<h3>', '#suffix' => '</h3>');
+      foreach ($stores as $store) {
+        $out[] = array(
+          '#markup' => l($store->name, "store_location/{$store->marketid}-{$store->loc}") . ', ' . $store->city . ', ' . $store->province,
+          '#suffix' => '<br />'
+        );
+        $item++;
+        if ($item == $break) {
+          $out[] = $br_markup;
+          $break = 0; // Assuming 1 break for 2 col format.
+        }
+      } 
+    }
+    $out[] = array('#markup' => '</td></tr></table>');
+    $out[] = array('#markup' => theme('pager'));
+  }
+  return $out;
+}
+
+
+
+/**
+ * Plans calculator page and form.
+ */
+function cs_plan_calculator_page() {
+  $ra[] = drupal_get_form('cs_plan_calculator_form');
+  return $ra;
+}
+
+
+function cs_plan_calculator_form($form, &$form_state) {
+  $items = array('Smartphone', 'Basic phone', 'Tablet', 'Connected device', 'Internet device');
+  $line_price = array(40, 30, 10, 5, 20);
+  $quantity = array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+  
+  // Div requested by theme developer. Could not addd to fieldset directly because of bug in bootstrap theme that duplicates it.
+  // See http://drupal.stackexchange.com/questions/130417/collapsible-fieldset-is-duplicating-its-prefix-and-suffix-value.
+  $form[] = array('#type' => 'markup', '#prefix' => '<div class="cs-device-type">');
+  $form['device'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Device type'),
+    '#description' => t('Add up to 10 devices to share your data package.'),
+    // '#prefix' => '<div class="cs-device-type">',
+    // '#suffix' => '</div>',
+  );
+  $form[] = array('#type' => 'markup', '#prefix' => '</div>');
+  
+  $index = 0;
+  foreach ($items as $device) {
+    $key = 'device_' . strtolower(str_replace(' ', '_', $device));
+    $form['device'][$key] = array(
+      '#type' => 'select',
+      '#title' => $device . ' - $' . $line_price[$index] . '/month',
+      '#default_value' => 0,
+      '#options' => $quantity,
+    );
+    $index++;
+  }
+  $form['device']['device_smartphone']['#default_value'] = 1;
+  
+  $form['data_package'] = array(
+    '#type' => 'select',
+    '#title' => t('Data package'),
+    '#default_value' => 50,
+    '#options' => array(
+      // 15 => '250mb - $15/month', verizon not offering this plan as of 11/24
+      20 => '500mb - $20/month',
+      40 => '1gb - $40/month',
+      50 => '2gb - $50/month',
+      60 => '3gb - $60/month',
+      70 => '4gb - $70/month',
+      // 80 => '6gb - $80/month', verizon not offering this plan as of 11/24
+      // 90 => '8gb - $90/month', verizon not offering this plan as of 11/24
+      80 => '10gb - $80/month',
+      // 110 => '12gb - $110/month', verizon not offering this plan as of 11/24
+      // 120 => '14gb - $120/month', verizon not offering this plan as of 11/24
+      100 => '15gb - $100/month',
+      // 130 => '16gb - $130/month', verizon not offering this plan as of 11/24
+      // 140 => '18gb - $140/month', verizon not offering this plan as of 11/24
+      150 => '20gb - $150/month',
+      225 => '30gb - $225/month',
+      300 => '40gb - $300/month',
+      375 => '50gb - $375/month',
+      450 => '60gb - $450/month',
+      600 => '80gb - $600/month',
+      750 => '100gb - $750/month',
+    ),
+  );
+  $form['monthly_total'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Per month'),
+    '#attributes' => array('readonly' => 'readonly'),
+    '#size' => 8,
+    '#default_value' => '$90', // Match the defaults in case of no javascript.
+  );
+  $form['monthly_total_edge'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Per month - Verizon Edge'),
+    '#attributes' => array('readonly' => 'readonly'),
+    '#size' => 8,
+    '#default_value' => '$80',
+  );
+  $form['#attached'] = array(
+    'js' => array(drupal_get_path('module', 'cs') . '/store.js')
+  );
+  return $form;
+}
+
+
+/**
+ * Mapping of market codes to names. Maybe make this a node type later to allow updating.
+ */
+function cs_markets() {
+  static $cs_markets;
+  if (!isset($cs_markets)) {
+    $cs_markets = array(
+      'AL' => 'Alabama', 
+      'CF' => 'Central Florida', 
+      'CT' => 'Coastal Texas', 
+      'EC' => 'East Carolinas', 
+      'EP' => 'Eastern Pennsylvania', 
+      'ET' => 'East Tennessee', 
+      'GC' => 'Gulf Coast', 
+      'IN' => 'Indiana', 
+      'KC' => 'Kansas City', 
+      'KX' => 'Knoxville', 
+      'KY' => 'Kentucky', 
+      'MD' => 'Maryland', 
+      'MT' => 'Middle Tennessee', 
+      'NC' => 'North Carolina', 
+      'NE' => 'New England', 
+      'NG' => 'North Georgia', 
+      'NT' => 'North Texas', 
+      'NY' => 'New York', 
+      'OR' => 'Orlando', 
+      'SF' => 'South Florida', 
+      'SG' => 'South Georgia', 
+      'ST' => 'South Texas', 
+      'TR' => 'Training', 
+      'UN' => 'Upstate New York', 
+      'VA' => 'Virginia', 
+      'WA' => 'Washington',
+    );
+  }
+  return $cs_markets;
+}
+
+
+/**
+ * Return true if we are running on a server that allows the preorder form.
+ * Want to allow for preorder and development, exclude on cs.com.
+ */
+function cs_preorder_server() {
+  static $preorder_server;
+  if (!isset($preorder_server)) {
+    $host = gethostname();
+    $preorder_server = (stripos($host, 'preorder') !== false || stripos($host, '.cellularsales.com') === false) ? true : false;
+  }
+  return $preorder_server;
+}
+
+
+
+
+/**
+ * Test page -- just a place to put some temporary test code.
+ */
+function cs_test_page($op = '') {
+  global $user;
+  if ($user->uid != 1) {
+    drupal_not_found();
+    return;
+  } 
+  $res = '<pre>';
+  $ip = array();
+
+  $ip[''] = 'Knoxville - empty address';
+  $ip['invalidaddress'] = 'Knoxville - not in database';
+
+  $ip['209.60.163.129'] = 'Rochester NY';
+  $ip['68.52.143.48'] = 'Nashville TN';
+  $ip['97.118.213.219'] = 'Emporia KS';
+  $ip['207.98.142.93'] = 'Knoxville TN';
+  $ip['24.153.143.172'] = 'Austin TX';
+  $ip['99.51.191.137'] = 'Austin TX';
+
+  foreach ($ip as $addr => $city) {
+    $res .= "\n\n" . $addr . ' => ' . $city . "\n";
+    $nid = cs_nearest_store_by_ip($addr);
+    if ($nid < 1) {
+      $res .= "No node: $nid";
+    } else {
+      $node = node_load($nid);
+      $loc = $node ? $node->location : null;
+      $res .= print_r($loc, true);
+    }
+  }
+  $res .= '</pre>';
+  return $res;
+}
+
+/**
+ * Implements hook_cron()
+ */
+function cs_cron(){
+  include_once(drupal_get_path('module', 'cs') . '/cs.admin.inc');
+  $curDate = strftime('%Y-%m-%d');
+  // Run once a day after midnight.
+  if (strcasecmp(variable_get('cs_cron_last_run', '2010-01-01'), $curDate) < 0) {
+    variable_set('cs_cron_last_run', $curDate);
+    cs_csoki_store_import();
+    cs_maxmind_db_update();
+    $month = date('Y-m');
+    if (variable_get('cs_location_file', '') !== $month) {
+      if (cs_location_file()) {
+        variable_set('cs_location_file', $month);
+      }
+    }
+  }
+  cs_geocode_all();
+  
+  /* Disable completely for now; uncomment if pre-order feature is brought back to life.
+  if (cs_preorder_server()) {
+    include_once('./' . drupal_get_path('module','storeloc') . '/preorder.inc');
+    storeloc_preorder_export();
+  }
+  */
+}
+
+
+/**
+ * Implements hook_menu().
+ */
+function cs_menu() {
+  if (cs_mobile_site()) {
+    $items['home'] = array(
+      'title' => 'Cellular Sales',
+      'page callback' => 'cs_home_mobile_page',
+      'access callback' => true,
+      'type' => MENU_CALLBACK,
+      'file' => 'mobile.inc',
+    );
+    $items['home-update'] = array(
+      'title' => 'Cellular Sales',
+      'page callback' => 'cs_home_mobile_page_update',
+      'access callback' => true,
+      'type' => MENU_CALLBACK,
+      'file' => 'mobile.inc',
+    );
+  } else {
+    // Complete store listings page.
+    $items['locations'] = array(
+      'title' => 'Locations',
+      'page callback' => 'cs_locations_page',
+      'access callback' => true,
+      'weight' => -50,
+      'type' => MENU_NORMAL_ITEM,
+    );
+    $items['verizon-plans'] = array(
+      'title' => 'Plan calculator',
+      'page callback' => 'cs_plan_calculator_page',
+      'access callback' => true,
+      'type' => MENU_NORMAL_ITEM,
+    );
+    $items['storelocator'] = array(
+      'title' => 'Store Locator',
+      'description' => 'Locate the nearest store.',
+      'page callback' => 'cs_store_locator_page',
+      'access callback' => true,
+      'weight' => -49,
+      'type' => MENU_NORMAL_ITEM,
+    );
+    // This is an alias that is used by cs employees.
+    $items['storelocator2'] = array(
+      'title' => 'Store Locator',
+      'page callback' => 'cs_store_locator_page',
+      'access callback' => true,
+      'type' => MENU_CALLBACK,
+    );
+    // URL for storloc block submissions so we can exclude googlebot.
+    $items['storelocator_block'] = array(
+      'title' => 'Store Locator',
+      'page callback' => 'cs_store_locator_block_form_submit',
+      'access callback' => true,
+      'type' => MENU_CALLBACK,
+    );
+    // Another alias setup for branding.
+    $items['ainge'] = array(
+      'title' => 'Welcome, TN Sports Radio Listeners!',
+      'page callback' => 'storeloc_map_page',
+      'access callback' => true,
+      'type' => MENU_CALLBACK,
+    );
+    $items['store_location/%'] = array(
+      'title' => 'Store Location',
+      'page callback' => 'cs_store_page',
+      'page arguments' => array(1),
+      'access callback' => true,
+      'type' => MENU_CALLBACK,
+    );
+    // Provide a way to refresh the nearest store location when the page is cached.
+    $items['cs-refresh-block/%'] = array(
+      'title' => 'Refresh Block',
+      'page callback' => 'cs_refresh_block',
+      'page arguments' => array(1),
+      'access callback' => true,
+      'type' => MENU_CALLBACK);
+      
+    // Admin interface.
+    $items['admin/config/services/cs'] = array(
+      'title' => 'Cellular Sales', 
+      'description' => 'Cellular Sales module admin settings and features.',
+      'page callback' => 'cs_admin_mailer', 
+      'access arguments' => array('cs admin'), 
+      'type' => MENU_NORMAL_ITEM,
+      'file' => 'cs.admin.inc',
+    );
+    $items['admin/config/services/cs/mailer'] = array(
+      'title' => 'Mailer Function', 
+      'description' => 'Process a CSV file with nearest store locations.',
+      'page callback' => 'cs_admin_mailer', 
+      'access arguments' => array('cs admin'), 
+      'type' => MENU_LOCAL_TASK,
+      'file' => 'cs.admin.inc',
+    );
+    
+    /* These items not converted for D7. Not sure if we need them.
+    $items['admin/settings/storeloc'] = array(
+      'title' => 'Store Locator settings',
+      'description' => 'Store location logs & functions.',
+      'page callback' => 'storeloc_admin_log',
+      'access arguments' => array('cs admin'),
+      'type' => MENU_NORMAL_ITEM,
+      'file' => 'cs.admin.inc',
+    );
+    $items['admin/settings/storeloc/updater'] = array(
+      'title' => 'CSOKI Store Update',
+      'page callback' => 'storeloc_admin_updater',
+      'access arguments' => array('cs admin'),
+      'weight' => 11,
+      'type' => MENU_LOCAL_TASK,
+      'file' => 'cs.admin.inc',
+    );
+    //This for the cron job to call directly - No form, but logged in
+    $items['admin/settings/storeloc/update_now'] = array(
+      'page callback' => 'storeloc_CSOKI_update',
+      'access arguments' => array('cs admin'),
+      'type' => MENU_CALLBACK,
+      'file' => 'cs.admin.inc',
+    );
+    
+    $items['storeloc_ziploc'] = array(
+      'title' => 'Store Locations by Zip Code Builder',
+      'page callback' => 'storeloc_stores_nearest_zipcode_file',
+      'access arguments' => array('cs admin'),
+      'type' => MENU_CALLBACK,
+      'file' => 'cs.ziploc.inc',
+    );
+    
+    */
+  }
+  // Temporary test page.
+  $items['cs-test'] = array(
+    'title' => 'CS Test',
+    'page callback' => 'cs_test_page',
+    'access callback' => true,
+    'type' => MENU_CALLBACK);
+
+  /* These are for future reference but note ajax (ahaha) handling is substantially changed in D7.
+  $items['preorder'] = array(
+    'title' => 'iPhone Pre-Order',
+    'page callback' => 'storeloc_preorder_page',
+    'access callback' => 'storeloc_preorder_server',
+    'type' => MENU_CALLBACK,
+    'file' => 'preorder.inc',
+  );
+  $items['preorder_ajax'] = array(
+    'page callback' => 'storeloc_preorder_ajax',
+    'access callback' => 'storeloc_preorder_server',
+    'type' => MENU_CALLBACK,
+    'file' => 'preorder.inc',
+  );
+  */
+  return $items;
+}
+
+
+
+/**
+ * Used to fix missing store codes on customer_testimonials.
+ * Probably won't need it again, but shows how to query and update custom content nodes.
+ */
+function _cs_fix_customer_testimonials() {
+  $fix = array(
+  'A. P.' => 'MD-NT',
+  'Alice D.' => 'NC-FR',
+  'AMBER H.' => 'ET-EZ',
+  );
+  
+  foreach($fix as $name => $store) {
+    $query = new EntityFieldQuery();
+    $query
+      ->entityCondition('entity_type', 'node')
+      ->entityCondition('bundle', 'customer_testimonial')
+      ->fieldCondition('field_name', 'value', $name, '=');
+    $res = $query->execute();
+    $ids = isset($res['node']) ? array_keys($res['node']) : array();
+    if (count($ids) !== 1) {
+      watchdog('cs', count($ids) . ' found for ' . $name);
+    } else {
+      $nodes = entity_load('node', $ids);
+      $node = array_shift($nodes);
+      $val = isset($node->field_store_code[$node->language][0]['value']) ? $node->field_store_code[$node->language][0]['value'] : '';
+      if (!$val) {
+        $node->field_store_code[$node->language][0]['value'] = $store;
+        $node->field_store_code[$node->language][0]['format'] = 'filtered_html';
+        $node->field_store_code[$node->language][0]['safe_value'] = $store;
+        node_save($node);
+      }
+    }
+  }
+}

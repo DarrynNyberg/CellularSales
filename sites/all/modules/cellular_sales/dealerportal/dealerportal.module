@@ -1,0 +1,757 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Allows dealer users to be showcased.
+ *
+ */
+
+/**
+ * Implementation of hook_perm().
+ */
+function dealerportal_perm() {
+  return array('administer dealer settings');
+}
+ 
+/**
+ * Implementation of hook_menu().
+ */
+function dealerportal_menu() {
+  $items['admin/settings/dealerportal'] = array(
+    'title' => 'Dealer Portal settings',
+    'description' => 'Dealer Portal logs & functions.',
+    'page callback' => 'dealerportal_admin_log',
+    'access arguments' => array('administer dealer settings'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'dealerportal.admin.inc',
+  );
+  $items['admin/settings/dealerportal/log'] = array(
+    'title' => 'View Log',
+    'access arguments' => array('administer dealer settings'),
+    'weight' => 0,
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/settings/dealerportal/updater'] = array(
+    'title' => 'CSOKI Dealer Update',
+    'page callback' => 'dealerportal_admin_updater',
+    'access arguments' => array('administer dealer settings'),
+    'weight' => 11,
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'dealerportal.admin.inc',
+  );
+  //This for the cron job to call directly - No form, but logged in
+  $items['admin/settings/dealerportal/update_now'] = array(
+    'page callback' => 'dealerportal_CSOKI_update',
+    'access arguments' => array('administer dealer settings'),
+    'type' => MENU_CALLBACK,
+    'file' => 'cs.admin.inc',
+  );
+  $items['spotlight_on_success'] = array(
+    'title' => 'Spotlight On Success',
+    'description' => '',
+    'page callback' => 'dealerportal_spotlight_page',
+    'access callback' => true,
+    'type' => MENU_CALLBACK,
+  );
+  //Define the dealer portal; Only accessible by typing in the dealer name!
+  $items['expert/%'] = array(
+    'title' => '',
+    'page callback' => 'dealerportal_page',
+    'page arguments' => array(1),
+    'access callback' => true,
+    'type' => MENU_CALLBACK,
+  );
+  /* Disabled 2012-03-22: No page for this and it generates SQL errors in the log.
+  $items['dealers_blogs'] = array(
+    'title' => ' ', //Don't want a title
+    'page callback' => 'dealerportal_blogs',
+    'access arguments' => array('edit own blog entries', 'delete own blog entries', 'create blog entries' ),
+    'type' => MENU_CALLBACK,
+  );
+  */
+  return $items;
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function dealerportal_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  if ($node->type!='dealer_profile') return;
+  switch ($op) {
+    case 'update':
+      //Update cellphone number & the dealer profile node id to be sure it is set
+      db_query("UPDATE {dealerportal_dealer} SET cellphone='%s', nid=%d WHERE uid=%d",substr($node->cellphone,0,15),$node->nid,$node->uid);
+      break;
+    //Simplify the "edit" interface for stores by hiding all optional element with CSS
+    case 'prepare':
+      //The permission "create/edit dealer_profile content" limits access
+      //Hide all unimportant collapsed groups
+      // drupal_add_css( drupal_get_path('module','dealerportal') . "/dealerportal_node_edit.css" );
+      //Turn on the side block "My Profile" tab
+      drupal_add_js("$(document).ready(function() { $('li.qtab-0').addClass('active');$('li.qtab-0 a').addClass('active'); });","inline");
+      break;
+  }
+}
+
+/**
+ * Implementation of the hook_form_FORM_ID_alter() for the "USER PROFILE" form
+ * Not sure if this was really necessary
+ */
+function user_form_user_profile_form_alter(&$form, &$form_state) {
+  //The permission "create/edit dealer_profile content" decides whether a use gets to this page
+  //Remove unimportant fieldsets & tabs
+  $js  = "$(document).ready(function() {";
+  $js .= "  $(\"form#user-profile-form fieldset\").each(function(i) {";
+  $js .= "    if ($(this).find(\"legend:contains('Account information')\").length!=1) $(this).css('display','none');";
+  $js .= "  });";
+  $js .= "  $(\"ul.tabs.primary li\").each(function(i) {";
+  $js .= "    if ($(this).find(\"span.tab:contains('Suspend')\").length!=1) $(this).css('display','none');";
+  $js .= "  });";
+  $js .= "  $('li.qtab-0').addClass('active');$('li.qtab-0 a').addClass('active');";  //Activate the "My Profile" tab
+  $js .= "});";
+  drupal_add_js($js,"inline");
+}
+
+//Create a new dealer profile node
+function dealerportal_newprofile($uid,$market,$dcode,$email){
+  include_once('./'. drupal_get_path('module', 'node') .'/node.pages.inc');
+  $dp_node = new stdClass();
+  $dp_node->type = 'dealer_profile';
+  node_object_prepare($dp_node);
+  $dp_node->uid = $uid;
+  $dp_nm = ucwords(str_replace("."," ",substr($email,0,strpos($email,"@"))));
+  $dp_node->title = $dp_nm;
+  node_save($dp_node);
+  db_query("INSERT INTO {dealerportal_dealer} (market,dcode,nid,uid,is_valid) VALUES ('%s',%d,%d,%d,1)",$market,$dcode,$dp_node->nid,$uid);
+}
+
+/**
+ * Implementation of hook_user().
+ */
+function dealerportal_user($op, &$edit, &$account, $category=null) {
+  switch ($op) {
+    case 'insert':
+      //Was dealer OR superdealer selected for a role
+      $results=db_query("SELECT rid FROM {role} WHERE name='dealer' OR name='superdealer'");
+      while($droles=db_fetch_object($results)) $dealerRoleIDs[] = $droles->rid;
+      //The role could either be set to ONE (from a form) or the role name (from CSOKI "dealerlist" update)
+      if ((!isset($edit['roles'][$dealerRoleIDs[0]]) || $edit['roles'][$dealerRoleIDs[0]]==0) && (!isset($edit['roles'][$dealerRoleIDs[1]]) || $edit['roles'][$dealerRoleIDs[1]]==0)) break;
+      //Create a NEW "dealer_profile" & "dealerportal_dealer" entry
+      dealerportal_newprofile($edit['uid'],substr($edit['name'],0,2),intval(substr($edit['name'],2)),$edit['mail']);
+      break;
+    case 'validate':  //Validate a dealer's username
+      //Don't need to validate a delete
+      if ($edit['op']=='Delete') break; 
+      //Was dealer OR superdealer selected for a role
+      $results=db_query("SELECT rid FROM {role} WHERE name='dealer' OR name='superdealer'");
+      while($droles=db_fetch_object($results)) $dealerRoleIDs[] = $droles->rid;
+      if ($edit['roles'][$dealerRoleIDs[0]]==0 && $edit['roles'][$dealerRoleIDs[1]]==0) break;
+      //Check if username is valid - 2 digit market with 3 or 4 digit dealer code
+      $edit['name'] = strtoupper(trim($edit['name']));
+      if (!preg_match('/^[a-z]{2}\d{1,4}$/i',$edit['name'])) {
+        form_set_error('name',t('Username has the 2 character market code with a 1 to 4 digit dealer id. Example: AL10')); break;
+      }
+      //Is the market code valid? Allow 'MG' & 'TR'
+      $mrkt = strtoupper(substr($edit['name'],0,2));
+      if (!db_result(db_query("SELECT id FROM {storeloc_market} WHERE id='%s'",$mrkt)) && $mrkt!='MG' && $mrkt!='TR') {
+        form_set_error('name',t('Unknown market. Please enter a valid Cellular Sales market.')); break;
+      }
+      break;
+    case 'update':
+      //Collect the roleids
+      $results=db_query("SELECT rid FROM {role} WHERE name='dealer' OR name='superdealer'");
+      while($droles=db_fetch_object($results)) $dealerRoleIDs[] = $droles->rid;
+      //Figure out before and after
+      $usrBefore_isDealer = isset($account->roles[$dealerRoleIDs[0]]) || isset($account->roles[$dealerRoleIDs[1]]);
+      $usrNow_isDealer = $edit['roles'][$dealerRoleIDs[0]]>0 || $edit['roles'][$dealerRoleIDs[1]]>0;
+      //Three possibilities: user->dealer; dealer->user; dealer->dealer
+      if ($usrBefore_isDealer==false && $usrNow_isDealer==true) {
+        //user to dealer: CREATE "dealerportal_dealer" & "dealer_profile" entry
+        dealerportal_newprofile($account->uid,substr($edit['name'],0,2),intval(substr($edit['name'],2)),$edit['mail']);
+      } elseif ($usrBefore_isDealer==true && $usrNow_isDealer==false) {
+        //dealer to user: DELETE "dealerportal_dealer" & "dealer_profile" entry
+        if ($nid=db_result(db_query("SELECT nid FROM {dealerportal_dealer} WHERE uid=%d",$account->uid))) node_delete($nid);
+        db_query("DELETE FROM {dealerportal_dealer} WHERE uid=%d",$account->uid);
+      } elseif ($usrBefore_isDealer==true && $usrNow_isDealer==true && strtolower($account->name)!=strtolower($edit['name'])) {
+        //dealer to dealer with username change: UPDATE "dealerportal_dealer" entry
+        $mrkt = substr($edit['name'],0,2);
+        db_query("UPDATE {dealerportal_dealer} SET market='%s', dcode=%d WHERE uid=%d",$mrkt,intval(substr($edit['name'],2)),$account->uid);
+      }
+      break;
+    case 'delete':
+      //Delete the dealer entry
+      db_query("DELETE FROM {dealerportal_dealer} WHERE uid=%d",$account->uid);
+      break;
+  }
+}
+
+/**
+ * Implementation of the hook_form_FORM_ID_alter() for the "DEALER PROFILE NODE"
+ */
+function node_form_dealer_profile_node_form_alter(&$form, &$form_state) {
+  //load the cell phone value
+  $cellphone = db_result(db_query("SELECT cellphone FROM {dealerportal_dealer} WHERE uid=%d", $form['uid']["#value"]));
+  $form["cellphone"] = array(
+    '#type' => 'textfield',
+    '#title' => t('Cell phone number'),
+    '#default_value' => $cellphone,
+    '#size' => 30,
+    '#maxlength' => 15,
+    '#weight' => 5,  //5-local,x-d2d,x-cellsales
+  );
+}
+
+//RULE: email notification function
+//When a dealer posts a new blog, the generated text is emailed
+function dealerportal_blogPostMsg($dUser, $blogNode) {
+  $msg = "Hello,\n\nThe dealer, <a href='http://cellularsales.com/expert/{$dUser->name}'>";
+  $dName = db_result(db_query("SELECT n.title FROM {node} n INNER JOIN {dealerportal_dealer} dd ON dd.nid = n.nid INNER JOIN {users} u ON u.uid = dd.uid WHERE u.uid = %d",$dUser->uid));
+  $msg .= $dName . "</a>, has posted a blog entry ('{$blogNode->title}') ";
+  $msg .= "and it is in the <a href='http://cellularsales.com/admin/content/modr8'>moderation queue</a> awaiting your approval.\n\n--Cellularsales.com team";
+  return $msg;
+}
+
+//RULE: dealer blog update condition
+function dealerportal_IsBlogUpdated($blogNode, $actUser) {
+  $is_admin = user_access("edit any blog entry",$actUser);
+  //Moderate updated post!!  (not done by default)
+  if (!$is_admin) db_query("UPDATE {node} SET status=0, moderate=1 WHERE nid=%d",$blogNode->nid);
+  //Published blog && Is not new entry && Not admin role
+  return $blogNode->status==1 && $blogNode->is_new==0 && $is_admin==FALSE;
+}
+
+/**
+ * "Dealer Information" PAGE.
+ */
+function dealerportal_page($dealerArg) {
+  global $user;
+  $dealerNodeProfileID = -1;
+  $dealerArg = strtoupper(trim($dealerArg));
+  //No lookups for dealer's node id!!
+  if(!is_numeric($dealerArg)) {
+    //Check for dealer's username
+    if (preg_match('/^[a-z]{2}\d{1,4}$/i',$dealerArg) && $dnid = db_result(db_query("SELECT nid FROM {dealerportal_dealer} WHERE market='%s' AND dcode=%d",substr($dealerArg,0,2),intval(substr($dealerArg,2))))) $dealerNodeProfileID=$dnid;
+    else {
+      //Check for dealer's first/last name which happens to be the cellularsales email username!
+      $dealerArg = str_replace(array("_"," "),".",$dealerArg);
+      $sql =  "SELECT d.nid FROM {dealerportal_dealer} d INNER JOIN {users} u ON u.uid = d.uid ";
+      $sql .= "WHERE SUBSTRING(u.mail,1,INSTR(u.mail,'@')-1) = '%s' LIMIT 1";
+      if ($dnid=db_result(db_query($sql,$dealerArg))) $dealerNodeProfileID=$dnid;
+    }
+  }
+  // drupal_add_css( drupal_get_path('module','dealerportal') . "/dealerportal.css" );
+  if ($dealerNodeProfileID == -1) {
+    $page = "<div id='dp_unknown'>Sorry, the requested dealer was not found.</div>";
+  } else {
+    //$dpName = db_result(db_query("SELECT title FROM {node} WHERE nid=%d",$dealerNodeProfileID));
+    //drupal_set_title(t("Wireless Expert: {$dpName}"));
+    $page = dealerportal_genInfoDisplay($dealerNodeProfileID);
+    //List the three latest blog entries, if has blog & the permissions
+    $uid = db_result(db_query("SELECT uid FROM {dealerportal_dealer} WHERE nid=%d",$dealerNodeProfileID));
+    $account = user_load($uid);
+    $cnt = db_result(db_query("SELECT COUNT(nid) FROM {node} WHERE uid=%d AND type='blog' AND status='1'",$uid));
+    $modCnt = db_result(db_query("SELECT COUNT(nid) FROM {node} WHERE uid=%d AND type='blog' AND status='0'",$uid));
+    if ($cnt>0 || ($user->uid==$account->uid && user_access('create blog entries',$account)) || (user_access('moderate content') && $modCnt>0)) {
+      $page .= "<div id='dp_blogposts'>";
+      $page .= "<h3 style='display:inline;padding-right:20px;'>Blog Posts</h3>";
+      if ($user->uid==$account->uid) {
+        $page .= "<button class='btn' onclick=\"location.href='/node/add/blog?destination=expert/{$dealerArg}';\" title='Create a new blog entry'>";
+        $page .= "<img width='16' height='16' src='/sites/default/files/Add_16x16.png'>New Blog Entry</button>";
+      }
+      if (($user->uid==$account->uid || user_access('moderate content')) && $modCnt>0) {
+          $page .= "&nbsp;&nbsp;&nbsp;<span sytle='font-size:.8em;'>";
+          $modMsg = "({$modCnt} ";
+          if ($modCnt==1) $modMsg .= "entry"; else $modMsg .= "entries";
+          $modMsg .= " awaiting approval)";
+          if (user_access('moderate content')) $page .= "<a href='/admin/content/modr8?destination=expert/{$dealerArg}' title='Moderate content'>{$modMsg}</a>"; else $page .= $modMsg;
+          $page .= "</span>";
+      } 
+      $page .= "<br />";
+      //Define the JS needed to open/close the blog posts
+      $js =  "function dp_init() {\n";
+      $js .= "  dp_blgInfo = new Array();\n";
+      $js .= "  $('#dp_blogposts .blogpost').each(function (i) {\n";
+      $js .= "    dp_blgInfo[this.id]=$(this).height();\n";
+      $js .= "    $(this).height(75);\n";
+      $js .= "  });\n";
+      $js .= "}\n";
+      $js .= "window.onload = dp_init;\n"; //Error on D2D site - can't use jQuery "ready" function
+      $js .= "function fn_dp_toggle(nid){\n";
+      $js .= "  var curHeight = $('#blg_'+nid).height();\n";
+      $js .= "  if (curHeight==75) {\n";
+      $js .= "    $('#blg_'+nid).animate({height:dp_blgInfo['blg_'+nid]},'fast');\n";
+      $js .= "    $('#blg_btn_'+nid).text('close');\n";
+      $js .= "  } else {\n";
+      $js .= "    $('#blg_'+nid).animate({height:75},'fast');\n";
+      $js .= "    $('#blg_btn_'+nid).text('read more');\n";
+      $js .= "  }\n";
+      $js .= "}\n";
+      drupal_add_js($js,"inline");
+      //List the blog entries
+      $results = pager_query("SELECT n.nid, n.title, n.created, nr.body, CHAR_LENGTH(nr.body) AS body_len FROM {node} n JOIN {node_revisions} nr ON n.vid=nr.vid WHERE n.type = 'blog' AND n.uid={$uid} AND n.status = 1 ORDER BY n.created DESC", 3);
+      if ($cnt>3) $page .= "<hr>" . theme('pager', NULL, 3);
+      $cntnum=0;
+      while ($blvals = db_fetch_object($results)) {
+        $page .= "<hr><div id='blg_{$blvals->nid}' class='blogpost'><h2 class='title'><a href='javascript:void(0);' onclick=\"fn_dp_toggle('{$blvals->nid}');\">{$blvals->title}</a></h2>";
+        $page .= "<b>posted on ". date("m/d/y",$blvals->created). "</b>&nbsp;&nbsp;&nbsp;";
+        if (($user->uid==$account->uid && user_access('edit own blog entries',$account)) || user_access('edit any blog entry',$user))
+          $page .= "<button class='btn' onclick=\"location.href='/node/{$blvals->nid}/edit?destination=expert/{$dealerArg}';\" title='Edit this blog entry'><img width='16' height='16' src='/sites/default/files/Edit_16x16.png'>Edit</button>&nbsp;&nbsp;&nbsp;";
+        if (($user->uid==$account->uid && user_access('delete own blog entries',$account)) || user_access('delete any blog entry',$user))
+          $page .= "<button class='btn' onclick=\"location.href='/node/{$blvals->nid}/delete?destination=expert/{$dealerArg}';\" title='Delete this blog entry'><img width='16' height='16' src='/sites/default/files/Delete_16x16.png'>Delete</button>";
+        $page .= "<br />";
+        $page .= $blvals->body . "</div>";
+        $page .= "<div style='height:10px;position:relative;top:-10px;background:url(\"/sites/default/files/mastfade2.png\") repeat-x 50%;'></div>";
+        $page .= "<div style='padding-bottom:10px;position:relative;top:-5px;'><a id='blg_btn_{$blvals->nid}' href='javascript:void(0);' onclick=\"fn_dp_toggle('{$blvals->nid}');\">read more</a></div>";
+        $cntnum++;
+      }
+      $page .= $output . "</div>";
+    }
+  }
+  return $page;
+}
+
+/**
+ * Implementation of "hook_form_alter" for user login
+ * Authenticate with custom code
+ */
+function dealerportal_form_alter(&$form,$form_state,$form_id) {
+  if ($form_id == 'user_login' || $form_id == 'user_login_block') {
+    // If the user login form is being submitted, add our validation handler.
+    if (isset($form_state['post']['name'])) {
+      // Find the local validation function's entry so we can replace it.
+      $array_key = array_search('user_login_authenticate_validate',$form['#validate']);
+      if ($array_key === FALSE) {
+        // Could not find it. Some other module must have run form_alter().
+        // We will simply add our validation just before the final validator.
+        $final_validator = array_pop($form['#validate']);
+        $form['#validate'][] = 'dealerportal_login_validate';
+        $form['#validate'][] = $final_validator;
+      } else {
+        // Found the local validation function. Replace with ours.
+        $form['#validate'][$array_key] = 'dealerportal_login_validate';
+      }
+    }
+  }
+}
+
+/*function uc_order_form_uc_order_view_update_form_alter(&$form, &$form_state) {
+  //Find the order's assigned dealer  ($form['order_id']['#value'])
+}*/
+
+//Custom view field 1: assignment link or order's assigned dealer name (Inside view: dealer_communication)
+function dealerportal_NewLeadsView1($data) {
+  $sql = "SELECT n.title FROM {node} n ";
+  $sql.= "LEFT OUTER JOIN {content_type_dealer_profile} cd ON cd.nid = n.nid ";
+  $sql.= "LEFT OUTER JOIN {dealerportal_dealer} d ON d.nid=cd.nid ";
+  $sql.= "LEFT OUTER JOIN {dealerorders} do ON do.vendorid = d.uid ";
+  $sql.= "WHERE do.orderid=%d";
+  $result = db_result(db_query($sql,$data->uc_orders_order_id));
+  if (empty($result)) {
+    echo "Assign to: <a href='/pending-orders?go=Assign&selorder[]={$data->uc_orders_order_id}'>Myself</a>";
+  } else {
+    echo "Assigned to: " . $result;
+  }
+}
+
+//Custom view field 2: display order's market plus extra (Inside view: dealer_communication)
+function dealerportal_NewLeadsView2($data) {
+  $sql = "SELECT market,zip FROM {dealerportal_orderqueue} WHERE orderid = %d";
+  $results = db_fetch_object(db_query($sql,$data->uc_orders_order_id));
+  echo "OrderID: <a href='/admin/store/orders/{$data->uc_orders_order_id}'>{$data->uc_orders_order_id}</a> on " . date("M d",$data->uc_orders_created) . " in market: <b>";
+  if (empty($results->market)) echo "??"; else echo "<span title='zipcode: {$results->zip}'>{$results->market}</span>";
+  echo "</b>";
+}
+
+//Custom view "New Leads" inside view dealer_communication
+//Take over the display of the output!
+//Queries taken and modified from "dealerportal.pages.inc"
+function dealerportal_NewLeadsView(&$static) {
+  //Only the first iteration does the query!
+  if (!isset($static['userMarket'])) {
+    global $user;
+    include_once("./".drupal_get_path('module','dealerportal')."/dealerportal.pages.inc");
+    $static['userMarket'] = dealerportal_UserMarket();
+    
+    //Query the pending orders based on user's market
+    $sql = "SELECT o.order_id, n.title AS dealername, u.name AS dealerUname, dq.market, o.created, LEFT(o.billing_postal_code,5) AS zip, CONCAT(o.billing_city,', ',uz.zone_code) AS city  FROM {uc_orders} o ";
+    $sql.= "LEFT JOIN {uc_order_statuses} os ON o.order_status = os.order_status_id ";
+    $sql.= "LEFT JOIN {uc_zones} uz ON uz.zone_id = o.billing_zone ";
+    $sql.= "LEFT JOIN {dealerorders} `do` ON do.orderid = o.order_id ";
+    $sql.= "LEFT JOIN {users} u ON u.uid = do.vendorid ";
+    $sql.= "LEFT JOIN {dealerportal_dealer} dd ON dd.uid = do.vendorid ";
+    $sql.= "LEFT JOIN {dealerportal_orderqueue} dq ON dq.orderid = o.order_id ";
+    $sql.= "LEFT JOIN {node} n ON dd.nid = n.nid ";
+    $sql.= "WHERE os.state = 'post_checkout' ";
+    if (!empty($static['userMarket'])) $sql.= "AND dq.market = '{$static['userMarket']}' ";
+    $sql.= "ORDER BY o.created DESC LIMIT 0,3";
+    $orderList = db_query($sql);
+    $static['orderList'] = $orderList;
+    $static['cnt'] = 0;
+  }
+  $order = db_fetch_object($static['orderList']);
+  if ($order) {
+    print "OrderID: <a href='/admin/store/orders/{$order->order_id}'>{$order->order_id}</a> on " . date("M d",$order->created);
+    if (!empty($static['userMarket'])) {
+      print " in zip: <b><span title='{$order->city}'>{$order->zip}</span>";
+    } else {
+      print " in market: <b>";
+      if (empty($order->market)) echo "??"; else echo "<span title='zipcode: {$order->zip}'>{$order->market}</span>";
+    }
+    print "</b></span></div><div class='view-field'><span class='field-content'>";
+    if (empty($order->dealerUname)) {
+      print "Assign to: <a href='/pending-orders?go=Assign&selorder[]={$data->uc_orders_order_id}'>Myself</a>";
+    } else {
+      print "Assigned to: ";
+      if (!empty($order->dealername)) print $order->dealername; else $order->dealerUname;
+    }
+  } else {
+    if ($static['cnt']==0) print "<b>No new orders available</b></span></div><div class='view-field'><span class='field-content'>&nbsp;";
+    else print "&nbsp;</span></div><div class='view-field'><span class='field-content'>&nbsp;";  //No more orders - Print blank line
+  }
+  $static['cnt']++;
+}
+
+//Setup a view - TODO
+//function dealerportal_views_api() { return array('api'=>2,'path'=>drupal_get_path('module', 'dealerportal') . '/views');}
+
+/**
+ * Implementation of "hook_mail_alter"
+ * Used to modify the email sent out to new users - dealers only
+ */
+function dealerportal_mail_alter(&$message) {
+  //Only modify dealers email
+  if ($message['id']=="user_register_admin_created" && preg_match('/^[a-z]{2}\d{1,4}$/i',$message['params']['account']->name)) {
+    $isDealer = false;
+    foreach($message['params']['account']->roles as $key => $value) if ($value=='dealer' || $value=='superdealer') { $isDealer=true; break;}
+    if ($isDealer) { 
+      //Dealer's information inside 'account' - name as username and mail as alias & name (Full name not available yet)
+      $dInfo['name'] = ucwords(str_replace("."," ",substr($message['params']['account']->mail,0,strpos($message['params']['account']->mail,"@"))));
+      $dInfo['alias'] = strtolower(str_replace(" ","_",$dInfo['name']));
+      $dInfo['username'] = $message['params']['account']->name;
+      //Replace the standard message with the "new_dealer" message
+      unset($message['body']);
+      dealerportal_mail('new_dealer',&$message,$dInfo);
+    }
+  }
+}
+
+/**
+ * Implementation of "hook_mail"
+ * Setup of the new dealer email
+ */
+function dealerportal_mail($key, &$message, $params) {
+  switch ($key) {
+    //Notify dealers of a web customer purchase in their area
+    case 'purchase_notify':
+      $message['subject'] = t('A new order (id: @orderid) on Cellularsales.com is available from zipcode @zip', array('@orderid'=>$params['orderid'],'@zip'=>$params['zip']));
+      //SMS - 169 characters only; I think it only displays the body
+      $message['body'][] = t('A new order (id: @orderid) on Cellularsales.com is available from zipcode @zip (~@dist miles away)', array('@orderid'=>$params['orderid'],'@zip'=>$params['zip'],'@dist'=>$params['dist']));
+      break;
+    case 'new_dealer':
+      $message['subject'] = t('Your new dealer account on CellularSales.com');
+      $message['body'][] = t('Hello @dname,\n',array('@dname'=>$params['name']));
+      $message['body'][] = t('You have been given a dealer account on CellularSales.com.\n');
+      $message['body'][] = t("Your public profile page is located at <a href='http://cellularsales.com/@alias'>http://cellularsales.com/@alias</a>.  A link to your profile page is displayed on the store information popup on “store locator” page.  This gives customers a chance to see who is available to talk to when they finally decide to come in and gives you a chance to make a great impression.  Please take the time to fill out your profile.\n",array('@alias'=>$params['alias']));
+      $message['body'][] = t('You may now log in to http://cellularsales.com/@alias with your Cellular Sales username (@username) and your Cellular Sales password.\n',array('@alias'=>$params['alias'],'@username'=>$params['username']));
+      $message['body'][] = t('\n-- Cellular Sales Team');
+      break;
+  }
+}
+
+/**
+ * Custom login authentication using CSOKI
+ */
+function dealerportal_login_validate($form, &$form_state) {
+  global $user;
+  if (!empty($user->uid)) {
+    // Another module has already handled authentication.
+    return;
+  }
+  $uname = $form_state['values']['name'];
+  if (preg_match('/^[a-z]{2}\d{1,4}$/i',$uname)) {
+    //Only authenticate dealers!
+    $market = strtoupper(substr($uname,0,2));
+    $dcode = strval(intval(substr($uname,2))); //change to int to remove improper amount of leading zeros
+    while (strlen($dcode)<4) { $dcode = '0' . $dcode; }  //must be a 4 digit number
+    $cquery = "https://www.csoki.com/cellwebsite/cellularsales.asp?QueryType=LOGINVALIDATE&Market={$market}&DealerCode={$market}{$dcode}&Password={$form_state['values']['pass']}";
+    $csokiReply = file_get_contents($cquery);
+    //$csokiReply = "<html><datarow><data>VALID</data></datarow></html>"; //For testing only!!
+    if (!is_bool($csokiReply) && $csokiReply!=false && preg_match("/<\/html>/",$csokiReply)==1 && preg_match("/<error>.+<\/error>/",$csokiReply)==0) {
+      //Begin processing data
+      preg_match_all("/<datarow><data>(.*?)<\/data><\/datarow>/i",$csokiReply,$matches,PREG_PATTERN_ORDER);
+      $pwdAuth = strtoupper(trim($matches[1][0]));
+      unset($matches);
+      if ($pwdAuth=='VALID') {
+        $existing_user = user_load(array('name' => $market.$dcode));
+        if (isset($existing_user->uid)) {
+          $user = $existing_user;
+        }
+        // Write session, update timestamp, run user 'login' hook.
+        user_authenticate_finalize($form_state['values']);
+      } else {
+        form_set_error('name', t("CSOKI authorization fail: '{$pwdAuth}'"));
+      }
+    } else {
+      form_set_error('name', t('CSOKI connection problem. Try again.'));
+    }
+  } else {
+    //Not a dealer so continue with normal login sequence
+    user_login_authenticate_validate($form, &$form_state);
+  }
+}
+
+//"Dealer's Blogs" PAGE.
+function dealerportal_blogs() {}
+
+/**
+ * Dealer notification of customer's order
+ */
+function dealerportal_NewOrder_notify($order,$customer) {
+  //include the storeloc module for geolocation
+  include_once('./'. drupal_get_path('module','storeloc') . "/storeloc.module");
+  //Sanitize the zipcode
+  $zipcode = trim($order->delivery_postal_code);
+  $zipcode = substr($zipcode,0,5);  //Only want the 5 digit zipcode
+  //Geocode the zipcode
+  $geozip = db_fetch_object(db_query("SELECT city,state,lat,lng FROM {storeloc_geozip} WHERE zip='%s'",$zipcode));
+  if ($geozip) {
+    $geocode['lat']=$geozip->lat;
+    $geocode['lng']=$geozip->lng;
+  } else {
+    //Zipcode not found in DB -> Use google's geocoding which can handle wrong zipcodes
+    //Lookup UberCart's state name from "delivery_zone"
+    $state = db_result(db_query("SELECT zone_code FROM {uc_zones} WHERE zone_id=%d",$order->delivery_zone));
+    $custaddr = cs_format_geolocation_address($order->delivery_street1,$order->delivery_city,$state,$order->delivery_postal_code);
+    $geocode = cs_geolocate_address( $custaddr );
+    //Ignore multiple return values from google
+  }
+  //Find the nearest store's market from the customer
+  $nearestSt = db_fetch_object(cs_nearest_stores_query($geocode['lat'], $geocode['lng'], 1));
+  if (!$nearestSt) return;  //No stores, exit
+  $market = db_result(db_query("SELECT marketid FROM {cs_store} WHERE nid=%d",$nearestSt->nid));
+  //Put in "dealerportal_orderqueue" for processing - (cron hook send out the notifications)
+  //Queue DB - id,market,orderid,lat,lng,userid(customer),timestamp
+  $sql = "INSERT INTO {dealerportal_orderqueue} (market,orderid,lat,lng,zip) VALUES ('{$market}',{$order->order_id},{$geocode['lat']},{$geocode['lng']},'{$zipcode}')";
+  db_query($sql);
+  //Immediately fire off the cron function/job - Don't want to wait up to an hour for this to happen!
+  dealerportal_cron();
+}
+
+/**
+ * Implementation of hook_cron()
+ */
+function dealerportal_cron() {
+  //No SMS texts from 8pm to 9am eastern standard time (timezones ignored for now)
+  $curHour = strftime("%H"); //Used for debugging
+  if (strcmp($curHour,"19")<0 && strcmp($curHour,"09")>=0) {
+    //Include the distance calculation function
+    include_once('./'. drupal_get_path('module','location') . "/earth.inc");
+    //Loop through all order notifications
+    $orderList = db_query("SELECT * FROM {dealerportal_orderqueue} WHERE notified IS NULL");
+    while ($order = db_fetch_object($orderList)) {
+      //Find all dealers in the customer's market that are working today AND have a cellphone number
+      $sql =  "SELECT dd.*, " . earth_distance_sql($order->lng,$order->lat,'l') . " AS distance FROM {dealerportal_dealer} dd ";
+      $sql .= "INNER JOIN {content_type_dealer_profile} dp ON dp.nid=dd.nid ";
+      $sql .= "INNER JOIN {cs_store} st ON st.nid = dp.field_storelocation_nid ";
+      $sql .= "INNER JOIN {location_instance} i ON i.nid = dp.field_storelocation_nid ";
+      $sql .= "INNER JOIN {location} l ON i.lid = l.lid ";
+      $sql .= "WHERE st.marketid='%s' AND dp.field_dp_worktime_value IS NOT NULL AND dd.cellphone IS NOT NULL";
+      $result = db_query($sql,$order->market);
+      //TODO: Do something when no dealears are returned
+      //Loop through the dealers
+      $msgCnt = 0;
+      while ($dealer = db_fetch_object($result)) {
+        //SMS all dealers about the new order - "New Order is available from zipcode x"
+        $to = str_replace("-","",$dealer->cellphone) . "@vtext.com";  //Verizon's email to sms
+        $params['zip'] = $order->zip;
+        $params['dist'] = round($dealer->distance * 0.00062137, 0);
+        $params['orderid'] = $order->orderid;
+        //Don't need the customer name or order contents
+        drupal_mail('dealerportal', 'purchase_notify', $to, language_default(), $params, variable_get('site_mail', 'info@cellularsales.com'));
+        $msgCnt++;
+      }
+      //Set "notified" for the order in "_orderqueue";  Only one notification allowed!
+      db_query("UPDATE {dealerportal_orderqueue} SET notified = NOW(), notified_cnt = %d WHERE id = %d",$msgCnt,$order->id);
+    }
+    //Orders in the "_orderqueue" are not deleted. They are needed later for order's market value
+  }
+}
+
+/**
+ * "Spotlight on Success" PAGE.
+ *
+ * Uses module "storeloc" 's functions:
+ * cs_nearest_store & cs_nearest_stores_sql
+ */
+function dealerportal_spotlight_page() {
+  $dealerNodeProfileID = -1;
+  //Look to see if the nearest store has a dealer (employee)
+  include_once('./'. drupal_get_path('module','storeloc') . "/storeloc.module");
+  $nearest_storeID = cs_nearest_store_by_ip();
+  if ($nearest_storeID != -1 ) {
+    $sql =  "SELECT n.nid FROM {node} n ";
+    $sql .= "INNER JOIN {content_type_dealer_profile} cdp ON n.nid = cdp.nid ";
+    $sql .= "WHERE cdp.field_storelocation_nid = {$nearest_storeID} AND n.type = 'dealer_profile' ";
+    $sql .= "LIMIT 1";
+    if (!$results = db_fetch_object(db_query($sql))) {
+      //No employees at nearest store!
+      $userInfo = cs_location_cookie();  //User's IP will be in the cache by now.
+      //Find the nearest store with employees
+      $subquery = "SELECT DISTINCT(field_storelocation_nid) FROM content_type_dealer_profile WHERE field_storelocation_nid IS NOT NULL";
+      $sql = cs_nearest_stores_sql($userInfo['lat'], $userInfo['lng'], $subquery, "LIMIT 1");
+      if ($nodeInfo = db_fetch_object(db_query($sql))) {
+        //Pick a random employee node profile from the nearest store
+        $sql =  "SELECT n.nid FROM {node} n ";
+        $sql .= "INNER JOIN {content_type_dealer_profile} cdp ON n.nid = cdp.nid ";
+        $sql .= "WHERE n.type='dealer_profile' AND cdp.field_storelocation_nid = " . $nodeInfo->nid;
+        $sql .= " ORDER BY RAND() LIMIT 1";
+        if ($results = db_fetch_object(db_query($sql))) $dealerNodeProfileID = $results->nid;
+      }
+    } else $dealerNodeProfileID = $results->nid;
+  } else {
+    //There are no stores, pick any available dealer (employee)
+    $sql =  "SELECT nid FROM node WHERE n.type = 'dealer_profile' LIMIT 1";
+    if ($results = db_fetch_object(db_query($sql))) $dealerNodeProfileID = $results->nid;
+  }
+  //Display the dealer
+  // drupal_add_css( drupal_get_path('module','dealerportal') . "/dealerportal.css" );
+  if ($dealerNodeProfileID != -1) {
+    $page = dealerportal_genInfoDisplay($dealerNodeProfileID);
+    //Comment section
+    $page .= "<h3>Comments</h3>";
+    $page .= "<div id='dp_commentblk'></div>";
+    include_once('./'. drupal_get_path('module','comment') . "/comment.module");
+    $page .= comment_render($dealerNodeProfileID);
+  } else {
+    //No dealer found
+    $page = "<div id='dp_dealerless'>No dealers are available at this time.</div>";
+  }
+  return $page;
+}
+
+/**
+ * A HTML list all the dealers of a store.
+ * Used in the "storeloc" module.
+ */
+function dealerportal_storedealers($storeId) {
+  $sql =  "SELECT n.title AS name, u.name AS username, cdp.field_dp_worktime_value AS worktime FROM {node} n ";
+  $sql .= "INNER JOIN {content_type_dealer_profile} cdp ON cdp.nid = n.nid ";
+  $sql .= "INNER JOIN {users} u ON n.uid = u.uid ";
+  $sql .= "INNER JOIN {dealerportal_dealer} d ON d.nid = n.nid ";  //Have to be in the official dealer list
+  $sql .= "WHERE n.type='dealer_profile' AND cdp.field_storelocation_nid = %d";
+  $dealerList = NULL;
+  if ($results = db_query($sql,$storeId)) {
+    while ($dealer = db_fetch_object($results)) {
+      $str = "<a href='/expert/{$dealer->username}'>{$dealer->name}</a>";
+      if (!empty($dealer->worktime)) {
+        $str .= "&nbsp;&nbsp;<span style='font-size:0.8em'>(";
+        $str .= strtolower(str_replace(" ","",$dealer->worktime));
+        $str .= ")</span>";
+      }
+      $dealerList[] = $str;
+    }
+  }
+  return $dealerList;
+}
+
+
+/**
+ * Store information lookup.
+ * Used in the "dealerportal" module
+ */
+function storeloc_StoreInfoLookup($nid) {
+  if ($nid==0 || $nid==NULL) return "";  //If no store assignment, return nothing
+  $sql =  "SELECT CONCAT(LOWER(st.marketid),'_',LOWER(st.loc)) AS storecode, l.name, l.additional, l.street, l.city, l.province, l.postal_code, p.phone FROM {location} l ";
+  $sql .= "INNER JOIN {location_instance} i ON i.lid = l.lid ";
+  $sql .= "INNER JOIN {cs_store} st ON st.nid = i.nid ";
+  $sql .= "INNER JOIN {location_phone} p ON p.lid = i.lid ";
+  $sql .= "WHERE i.nid={$nid}";
+  $stInfo = "";
+  if ($results = db_fetch_object(db_query($sql))) {
+    $stAddr = ucwords(strtolower($results->name)) ."&nbsp;&nbsp;<a style='font-size:.8em;' href='/store_location/{$results->storecode}'>(map)</a><br />";
+    $stAddr .= ucwords(strtolower($results->street)) . "<br />";
+    if (!empty($storeLst->additional)) $stAddr .= "<span class='cs-address-additional'>".$results->additional . "</span><br />";
+    $stAddr .= ucwords(strtolower($results->city)) . ", " . $results->province . " " . $results->postal_code;
+    $stInfo = array('address'=>$stAddr,'phone'=>$results->phone);
+  }
+  return $stInfo;
+}
+
+/**
+ * Dealer general info display
+ */
+function dealerportal_genInfoDisplay($dealerNodeProfileID) {
+  //Load the dealer's node profile
+  $dProfile = node_load($dealerNodeProfileID);
+  $page = "<div id='dp_photo'><image width='200' height='220' src='/";
+  if (!isset($dProfile->field_dealerphoto[0])) {
+    //Show default image
+    $page .= drupal_get_path('module','dealerportal') . "/dealer_default.jpg' />";
+  } else {
+    $page .= $dProfile->field_dealerphoto[0]['filepath'] . "' />";
+  }
+  //Display twitter & facebook icons, if available
+  if (!empty($dProfile->field_dp_twitter[0]['value']) || !empty($dProfile->field_dp_facebook[0]['value']))
+    $page .= "Follow me:&nbsp;&nbsp;";
+  if (!empty($dProfile->field_dp_twitter[0]['value'])) {
+    $twit = $dProfile->field_dp_twitter[0]['value'];
+    $page .= "<a href='http://twitter.com/" . ($twit[0]=='@'?substr($twit,1):$twit) . "' target='_blank'><image width='16' height='16' src='/sites/default/files/twitter.png'></a>&nbsp;&nbsp;";
+  }
+  if (!empty($dProfile->field_dp_facebook[0]['value']))
+    $page .= "<a href='http://" . str_replace("http://","",$dProfile->field_dp_facebook[0]['value']) . "' target='_blank'><image width='16' height='16' src='/sites/default/files/facebook.png'></a>";
+  //Display the name & about me info
+  $page .= "</div><div id='dp_geninfo'><h3>" . $dProfile->title . "</h3>";
+  $page .= "<p>" . $dProfile->body . "</p>";
+  //Display dealer's assigned store info
+  $page .= "<table id='dp_addr'>";
+  if (module_exists("storeloc")) {
+    include_once( drupal_get_path('module','storeloc') . "/storeloc.module");
+    //Only show if successful lookup
+    if ($stInfo=storeloc_StoreInfoLookup($dProfile->field_storelocation[0]['nid'])) {
+      $page .= "<tr><td class='firstTD'><b>Location:</b></td><td>{$stInfo['address']}</td></tr>";
+      //Showing the hours only makes sense with the location lookup
+      $page .= "<tr><td class='firstTD'><b>Hours:<b></td><td>{$dProfile->field_dp_worktime[0]['value']}</td></tr>";
+    }
+  }
+  //Show the phone number
+  $prvPhone=db_result(db_query("SELECT cellphone FROM {dealerportal_dealer} WHERE nid=%d",$dealerNodeProfileID));
+  if ((isset($stInfo) && !empty($stInfo['phone'])) || (!empty($prvPhone) && $dProfile->field_dp_publicnum[0]['value']==1)) {
+    $page .= "<tr><td class='firstTD'><b>Phone#:</b></td><td>";
+    if ($dProfile->field_dp_publicnum[0]['value']==1) $page .= $prvPhone; else $page .= $stInfo['phone'];
+    $page .= "</td></tr>";
+  }
+  //Show dealer's phone model
+  if (!empty($dProfile->field_dp_cellmodel[0]['value']))
+    $page .= "<tr><td class='firstTD'><b>Phone model:</b></td><td>{$dProfile->field_dp_cellmodel[0]['value']}</td></tr>";
+  $page .= "</table>";
+  $page .= "</div>";
+  //Insert login or nearest store block
+  $sql = "SELECT r.rid FROM {users_roles} u INNER JOIN {role} r ON r.rid=u.rid WHERE r.name='superdealer' AND u.uid={$dProfile->uid}";
+  if (db_result(db_query($sql)) && !user_is_logged_in()) {
+    $page .= "<div id='dp_rightblock'><h2 class='title'>Login</h2><div class='content'>";
+    $page .= drupal_get_form('user_login_block');
+    $page .= "</div></div>";
+  } else {
+    $block = module_invoke('storeloc','block','view',1);
+    $page .= "<div id='dp_rightblock'><h2 class='title'>{$block['subject']}</h2><div class='content'>";
+    $page .= $block['content'];
+    $page .= "</div></div>";
+  }
+  $page .= "<br id='dp_clear'/><br />"; //close "dp_deninfo" div
+  //Display 3 random survey questions
+  $cnt=0;
+  if ($result = db_query("SELECT field_name AS field, label FROM {content_node_field_instance} WHERE type_name='dealer_profile' AND field_name LIKE 'field_dp_surveyq%' ORDER BY RAND()")) {
+    $page .= "<table id='dp_survey'>";
+    while($surveyQ = db_fetch_object($result)) {
+      if (!empty($dProfile->{$surveyQ->field}[0]['value']) && $cnt<3) {
+        $page .= "<tr><td class='firstTD'><b>Q:</b></td><td><b>{$surveyQ->label}</b></td></tr>";
+        $page .= "<tr><td class='firstTD'><b>A:</b></td><td>" . $dProfile->{$surveyQ->field}[0]['value'] . "</td></tr>";
+        $page .= "<tr><td colspan='2'>&nbsp;</td></tr>";
+        $cnt++;
+      }
+    }
+    $page .= "</table>";
+  }
+  return $page;
+}

@@ -1,0 +1,60 @@
+NOTE: PLEASE DOCUMENT ALL MODULE CHANGES.
+Include date, author, modules added or removed and reason for each.
+
+2015-02-18 John DeSoi
+- google_analytics: User tracking and analysis. Requested in ticket #242.
+
+2014-10-16 John DeSoi
+- menu_token: Used to add timestamp parameter to phones view main-menu items.
+
+2014-08-11 John DeSoi
+- readmorecontrol: Control visibilty and placement of read more links.
+
+2014-07-07 John DeSoi
+- browsecap: Used for mobile browser detection.
+
+2014-05-12 John DeSoi (most modules added by others without updating this file).
+- better_exposed_filters: Used for improving the resource library exposed 
+  filters.
+- bundle_copy: Allows import and export of content types.
+- conditional_styles: Used by the new cellsales7 theme to add conditional
+  stylesheets for Internet Explorer.
+- context: Allows per page block and other customizations.
+- ds (display suite): Allows customization of content type displays without 
+  using PHP template files.
+- entity: Entity API used by various Ubercart modules.
+- field_group: Creates fieldsets and groups in content types.
+- imce, imce_wysiwyg: Support for wysiwyg content editing. Currently setup to 
+  use ckeditor in sites/all/libraries/ckeditor.
+- jquery_update: Allows a newer version of jQuery to be used with Drupal.
+- menu_block: Provides configurable blocks of menu items.
+- rules: Required by Ubercart.
+- ubercart: Drupal e-commerce package.
+
+
+2014-02-12 John DeSoi
+- feeds: Using import feature to load content from Drupal 6 cs.com.
+- job_scheduler: Required by feeds.
+- backup_migrate: Automatic database backups.
+
+
+2014-01-23 John DeSoi
+- pathauto: Creates automatic URLs from node titles. Requested by CS.
+- token: Required by pathauto.
+
+
+2013-11-05 John DeSoi
+- link: Provides a CCK link field. Needed to convert Resource Library content
+  type from Drupal 6.
+- views: Used to create resource library view.
+- ctools: Required by views.
+- webform: For end user creation of web forms. Requested in Assembla ticket #131
+  requirements.
+- wysiwyg: Requested in Assembla ticket #131 requirements.
+
+
+2013-10-17 John DeSoi
+- cellular_sales: Start on Drupal 7 conversion of store location and dealer 
+  portal modules.
+- location: Location support required by CS store location module.
+- admin_menu: Extended administration menus.

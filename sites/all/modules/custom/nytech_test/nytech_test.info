@@ -1,0 +1,5 @@
+name = NyTech Test
+description = Was not able to get access to some features so i'm recreating them.
+core = 7.x
+package = NyTech
+files[] = nytech_test.module

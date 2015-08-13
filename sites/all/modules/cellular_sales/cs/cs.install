@@ -1,0 +1,284 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Installation / uninstallation routines.
+ */
+
+
+
+/**
+ * Implementation of hook_install().
+ */
+function cs_install() {
+  variable_set('comment_store', 0); // Disable comments on stores.
+  
+  $loc_settings = array (
+    'multiple' => 
+    array (
+      'min' => '1',
+      'max' => '1',
+      'add' => '1',
+    ),
+    'form' => 
+    array (
+      'weight' => '0',
+      'collapsible' => 0,
+      'collapsed' => 0,
+      'fields' => 
+      array (
+        'name' => 
+        array (
+          'collect' => '2',
+          'default' => '',
+          'weight' => '2',
+        ),
+        'street' => 
+        array (
+          'collect' => '2',
+          'default' => '',
+          'weight' => '4',
+        ),
+        'additional' => 
+        array (
+          'collect' => '1',
+          'default' => '',
+          'weight' => '6',
+        ),
+        'city' => 
+        array (
+          'collect' => '2',
+          'default' => '',
+          'weight' => '8',
+        ),
+        'province' => 
+        array (
+          'collect' => '2',
+          'default' => '',
+          'weight' => '10',
+        ),
+        'postal_code' => 
+        array (
+          'collect' => '2',
+          'default' => '',
+          'weight' => '12',
+        ),
+        'country' => 
+        array (
+          'collect' => '4',
+          'default' => 'us',
+          'weight' => '14',
+        ),
+        'phone' => 
+        array (
+          'collect' => '2',
+          'default' => '',
+          'weight' => '25',
+        ),
+        'fax' => 
+        array (
+          'collect' => '1',
+          'default' => '',
+          'weight' => '26',
+        ),
+      ),
+    ),
+    'display' => 
+    array (
+      'weight' => '0',
+      'hide' => 
+      array (
+        'country' => 'country',
+        'province_name' => 'province_name',
+        'country_name' => 'country_name',
+        'map_link' => 'map_link',
+        'coords' => 'coords',
+        'name' => 0,
+        'street' => 0,
+        'additional' => 0,
+        'city' => 0,
+        'province' => 0,
+        'postal_code' => 0,
+        'phone' => 0,
+      ),
+      'teaser' => 1,
+      'full' => 1,
+    ),
+    'rss' => 
+    array (
+      'mode' => 'none',
+    ),
+  );
+  
+  variable_set('location_settings_node_store', $loc_settings);
+  
+  // Create store database if no stores.
+  $find = db_query('SELECT count(*) from {cs_store} LIMIT 1')->fetchField();
+  if (!$find) { // Import default store database.
+    include_once(dirname(__FILE__) . '/cs.admin.inc'); // Redo as class to get rid of includes.
+    $path = drupal_get_path('module', 'cs') . '/data/store-data-feed-sample.html';
+    cs_csoki_store_import($path, true);
+  }
+}
+
+/**
+ * Implentation of hook_uninstall().
+ */
+function storeloc_uninstall() {
+  $stores = db_query('SELECT nid FROM {cs_store}')->fetchCol(0);
+  node_delete_multiple($stores);
+  node_type_delete('store');
+  variable_del('location_settings_node_store');
+}
+
+
+/**
+ * Implementation of hook_schema().
+ */
+function cs_schema() {
+  
+  $schema['cs_store'] = array(
+    'description' => 'Store information.',
+    'fields' => array(
+      'marketid' => array(
+        'description' => 'Market.',
+        'type' => 'char',
+        'length' => 3,
+        'not null' => TRUE,
+      ),
+      'loc' => array(
+        'description' => 'Location name abbreviation.',
+        'type' => 'char',
+        'length' => 3,
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'description' => 'Store Drupal node id.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      't_phone' => array(
+        'description' => 'Tracked phone number.',
+        'type' => 'varchar',
+        'length' => 15,
+        'not null' => FALSE,
+      ),
+      'outlet' => array(
+        'description' => 'Outlet number.',
+        'type' => 'varchar',
+        'length' => 8,
+        'not null' => FALSE,
+      ),
+      'opened' => array(
+        'description' => 'If true, store is open.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'hours' => array(
+        'description' => 'Store hours of operation.',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+      'geo_accuracy' => array(
+        'description' => 'Geolocation accuracy 0 (worst) to 9 (best).',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'csoki_update' => array(
+        'description' => 'If true, this record can be updated by the CSOKI update procedure.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      'repair_center' => array(
+        'description' => 'If true, this is a repair center location.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('marketid','loc'),
+  );
+  
+  
+  $schema['cs_preorder'] = array(
+    'description' => 'Manage data for phone pre-orders.',
+    'fields' => array(
+      'id' => array('type' => 'serial', 'not null' => true),
+       // Note was type 'datetime' but not supported by Drupal 7. Will need to revisit if we do preorder.
+      'stamp' => array('type' => 'int', 'not null' => true),
+      'data' => array('type' => 'text', 'not null' => true),
+    ),
+    'primary key' => array('id'),
+  );
+  
+  return $schema;
+}
+
+
+
+/**
+ * Add support for store repair center location.
+ */
+function cs_update_7101() {
+  db_add_field('cs_store', 'repair_center', array(
+    'description' => 'If true, this is a repair center location.',
+    'type' => 'int',
+    'size' => 'tiny',
+    'not null' => TRUE,
+    'default' => 0,
+    )
+  );
+  return t('cs 7101 update complete');
+}
+/**
+ * Adding table to save price plan of user while adding product to cart
+ */
+function cs_update_7102() {
+  $schema = array(
+      'description' => 'Cart Product Price Plan information',
+      'fields' => array(
+          'id' => array(
+              'description' => 'The primary identifier for Cart Product Price Plan information table',
+              'type' => 'serial',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+          ),
+          'cart_id' => array(
+              'description' => 'A user-specific cart ID. For authenticated users, their users.uid. For anonymous users, a token.',
+              'type' => 'varchar',
+              'length' => 255,
+              'default' => '',
+          ),
+          'nid' => array(
+              'description' => 'The node.nid of the product.',
+              'type' => 'int',
+              'unsigned' => TRUE,
+              'not null' => TRUE,
+              'default' => 0,
+          ),
+          'price_plan' => array(
+              'description' => 'The selected price plan of the product.',
+              'type' => 'varchar',
+              'length' => 15,
+              'default' => 'contract'
+          )
+      ),
+      'indexes' => array(
+          'cart_ids' => array('cart_id'),
+          'node_ids' => array('nid'),
+      ),
+      'primary key' => array('id'),
+      'unique keys' => array(
+          'cart_product_price_plan' => array('cart_id', 'nid', 'price_plan')
+      ),
+  );
+  db_create_table('cs_cart_product_price_plan', $schema);
+}

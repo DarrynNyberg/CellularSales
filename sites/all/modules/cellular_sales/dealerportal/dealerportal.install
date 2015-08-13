@@ -1,0 +1,73 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Installation / uninstallation routines.
+ *
+ * Creates the dealer profile node type.
+ */
+
+ 
+/**
+ * Implementation of hook_install().
+ */
+function dealerportal_install() {
+  //Setup dealer role type
+  db_query("DELETE FROM {role} WHERE name = 'dealer'");  //Don't want duplicate dealer roles
+  db_query("INSERT INTO {role} (name) VALUES ('dealer')");
+  $dealerRoleID = db_result(db_query("SELECT rid FROM {role} WHERE name ='dealer'"));
+  //Setup dealer permissions
+  $perms = 'access comments, post comments, search content, use advanced search, edit own webform submissions, create blog entries, delete own blog entries, edit own blog entries';
+  db_query('DELETE FROM {permission} WHERE rid = %d', $dealerRoleID);
+  db_query("INSERT INTO {permission} (rid, perm) VALUES (%d, '%s')", $dealerRoleID, $perms);
+  //Delete "content_profile"'s useless profile node type
+  if (db_result(db_query("SELECT type FROM {node_type} WHERE name ='profile'"))) {
+    node_type_delete('profile');
+    variable_del('content_profile_use_profile');
+  }
+  //Now create the cck built "dealer_profile" node type
+  create_dealerportal_nodetype();
+  variable_set('content_profile_dealer_profile',unserialize('a:0:{}'));
+}
+
+/**
+ * Implentation of hook_uninstall().
+ */
+function dealerportal_uninstall() {
+  //Keep dealer users??
+  //Remove dealer role type & permissions
+  $dealerRoleID = db_result(db_query("SELECT rid FROM {role} WHERE name ='dealer'"));
+  db_query("DELETE FROM {role} WHERE rid = %d", $dealerRoleID);
+  db_query('DELETE FROM {permission} WHERE rid = %d', $dealerRoleID);
+  //Delete the dealer profile node type & all its node instances
+  node_type_delete('dealer_profile');
+  //Delete variables
+  variable_del('content_profile_dealer_profile');
+  variable_del('content_profile_use_dealer_profile');
+}
+
+/**
+ * Programmatically create the store CCK fields and type using the content copy module
+ */
+function create_dealerportal_nodetype() {
+  if(!module_exists("content_copy")){
+    drupal_set_message('Programmatically creating CCK fields requires the Content Copy module. Exiting.');
+    return;
+  }
+  $form_state['values']['type_name'] = '<create>';
+  $form_state['values']['op'] = t('Import');
+  $filename = './'. drupal_get_path('module','dealerportal') . "/dealerportal.cck";
+  if(file_exists($filename)){
+    $form_state['values']['macro'] = file_get_contents($filename);
+  } else {
+    drupal_set_message('Unable to read input file for import. Exiting.');
+    return;
+  }
+  //include required files
+  include_once('./'. drupal_get_path('module', 'node') .'/content_types.inc');
+  include_once('./'. drupal_get_path('module', 'content') .'/includes/content.admin.inc');
+ 
+  //import content by executing content copy import form and passing macro
+  drupal_execute("content_copy_import_form", $form_state);
+}

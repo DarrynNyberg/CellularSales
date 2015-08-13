@@ -1,0 +1,9 @@
+#LocationInput div.form-item {float:left;margin-right:10px;}
+#LocationInput div#submitBtnDiv {padding-top:25px;}
+#StoreList {clear:left;float:left;}
+#StoreList div.cs-store-address {margin:10px 10px 15px 0px;}
+#StoreList div.cs-store-address td {padding-right:5px;}
+#StoreList .cs-store-address-marker{cursor:pointer;}
+#StoreList h6{font-size:1.4em;}
+#StoreList #geocode_err{font-size:.9em;color:red;padding-bottom:12px;padding-left:20px;}
+#StoreList div.cs-store-address ul {list-style-type:disc;text-indent:10px;list-style-position:inside;}

@@ -1,0 +1,37 @@
+<?php
+/**
+ * Test store location module.
+ * 
+ * Doing this is currently not feasbile for the storeloc module. The schema is way out
+ * of sync with the database and the way Drupal's simpletest works requires the module
+ * to be completely setup from this code (as in a clean database).
+ */
+class StorelocTestCase extends DrupalWebTestCase {
+  function getInfo() {
+    return array(
+      'name' => t('Store Location'),
+      'description' => t('Test operation of store location module.') ,
+      'group' => t('SCM Modules'),
+    );
+  }
+  
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('store_loc');
+  }
+
+  /**
+   * Implementation of tearDown().
+   */
+  function tearDown() {
+    parent::tearDown();
+  }
+
+
+	function testIpMapping() {
+		$this->assertEqual(3730, cs_nearest_store_by_ip('68.52.143.48')); // Nashville 37209
+	}
+
+}

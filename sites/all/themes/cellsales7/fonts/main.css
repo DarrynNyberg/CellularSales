@@ -1,0 +1,3095 @@
+/*
+ * HTML5 Boilerplate
+ *
+ * What follows is the result of much research on cross-browser styling.
+ * Credit left inline and big thanks to Nicolas Gallagher, Jonathan Neal,
+ * Kroc Camen, and the H5BP dev community and team.
+ */
+
+/* ==========================================================================
+   Base styles: opinionated defaults
+   ========================================================================== */
+
+html,
+button,
+input,
+select,
+textarea {
+    color: #222;
+}
+
+body {
+	font-family: 'MyriadPro', Helvetica, Arial, sans-serif;
+    font-size: 1em;
+    line-height: 1.4;
+}
+
+/*
+ * Remove text-shadow in selection highlight: h5bp.com/i
+ * These selection declarations have to be separate.
+ * Customize the background color to match your design.
+ */
+
+::-moz-selection {
+    background: #b3d4fc;
+    text-shadow: none;
+}
+
+::selection {
+    background: #b3d4fc;
+    text-shadow: none;
+}
+
+/*
+ * A better looking default horizontal rule
+ */
+
+hr {
+    display: block;
+    height: 1px;
+    border: 0;
+    border-top: 1px solid #ccc;
+    margin: 1em 0;
+    padding: 0;
+}
+
+/*
+ * Remove the gap between images and the bottom of their containers: h5bp.com/i/440
+ */
+
+img {
+    vertical-align: middle;
+}
+
+/*
+ * Remove default fieldset styles.
+ */
+
+fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+/*
+ * Allow only vertical resizing of textareas.
+ */
+
+textarea {
+    resize: vertical;
+}
+
+/* ==========================================================================
+   Chrome Frame prompt
+   ========================================================================== */
+
+.chromeframe {
+    margin: 0.2em 0;
+    background: #ccc;
+    color: #000;
+    padding: 0.2em 0;
+}
+
+/* ==========================================================================
+   Author's custom styles
+   ========================================================================== */
+
+@font-face {
+  font-family: 'MyriadPro';
+  src: url('../fonts/MyriadPro.eot');
+  src: url('../fonts/MyriadPro.eot?#iefix') format('embedded-opentype'),
+  url('../fonts/MyriadPro.woff') format('woff'),
+  url('../fonts/MyriadPro.ttf') format('truetype'),
+  url('../fonts/MyriadPro.svg#MyriadPro') format('svg');
+  font-weight: normal;
+  font-style: normal;
+} 
+ 
+  @font-face {
+  font-family: 'MyriadPro-Bold';
+  src: url('../fonts/MyriadPro-Bold.eot');
+  src: url('../fonts/MyriadPro-Bold.eot?#iefix') format('embedded-opentype'),
+  url('../fonts/MyriadPro-Bold.woff') format('woff'),
+  url('../fonts/MyriadPro-Bold.ttf') format('truetype'),
+  url('../fonts/MyriadPro-Bold.svg#MyriadPro-Bold') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+body.front {
+	background: url(../img/background-tile.png) repeat-x;
+  	margin: 0;
+}
+
+body.not-front {
+	background: url(../img/background-tile-not-front.png) repeat-x;
+  	margin: 0;
+}
+
+/* ----------------- User Page ------------------------------ */
+
+#user-login input[type="text"],
+#user-login input[type="password"] {
+	border:1px solid #ccc;
+	padding:5px;
+}
+
+
+/* ----------------- Navigation ----------------------------- */
+
+#navbar {
+	width:1059px;
+	height:166px !important;
+	padding:0;
+}
+
+.navbar.container {
+	max-width:1060px;
+}
+
+.navbar {
+	background:none;
+	margin:0 auto;
+	border:none;
+}
+
+.navbar .logo {
+	padding:0;
+}
+
+.navbar.container {
+	margin:0 auto;
+}
+
+.navbar-btn {
+	margin:0 0 8px 0;
+}
+
+.navbar-default .navbar-nav>.active>a, 
+.navbar-default .navbar-nav>.active>a:hover, 
+.navbar-default .navbar-nav>.active>a:focus {
+	background:none;
+}
+
+#block-system-main-menu .menu {
+	width: 764px;
+}
+
+#block-search-form {
+	width: 204px;
+	padding: 2px;
+	border: 1px solid #666;
+	border-radius: 4px;
+	white-space: nowrap;
+	margin:15px 30px 0 0 !important;
+}
+
+#block-search-form .btn {
+	padding: 0 4px;
+	margin: 0 0 0 8px;
+	width: 61px;
+	height: 22px;
+	border: none;
+	background: url(../img/btn-search.png);
+	cursor: pointer;
+	font-size: 11px;
+	font-weight: bold;
+	color: #fff;
+	text-transform: uppercase;
+	vertical-align: top;
+}
+
+#block-search-form .form-item {
+	margin:0;
+}
+
+#block-search-form .form-control {
+	height:25px;
+	border:none;
+}
+
+#block-menu-block-1 {
+	float:right;
+}
+
+#block-menu-block-1 .menu li {
+	padding-right: 5px;
+	font-size: 11px;
+	line-height: 11px;
+	text-transform: uppercase;
+	font-weight: bold;
+	float:left;
+}
+
+#block-menu-block-1 .menu li a {
+	color: #ab1321;
+	text-decoration: underline;
+	padding:0 5px 0 0;
+	border-right:1px solid #000;
+}
+
+#block-menu-block-1 .menu li a:hover {
+	background:none;
+}
+
+#block-menu-block-1 .menu li.last a {
+	border:none;
+}
+
+#block-menu-block-2 {
+	width:70%;
+	float:left;
+	margin:27px 0 0;
+}
+
+#block-menu-block-2 .menu li {
+	padding-right: 15px;
+	font-size: 18px;
+	line-height: 18px;
+	text-transform: capitalize;
+	font-family: MyriadPro, Helvetica, Arial, sans-serif;
+	float:left;
+}
+
+#block-menu-block-2 .menu li a {
+	background: none;
+	color:#fff;
+	border-right:1px solid #fff;
+	padding:0 20px 0 0;
+	font-size: 0.9em;
+}
+
+#block-menu-block-2 .menu li.last a {
+	border:none;
+}
+
+#block-menu-block-2 .menu li a:hover {
+	background:none;
+	text-decoration:underline;
+}
+
+#block-menu-block-2 .menu .caret {
+  display: none;
+}
+
+#block-menu-block-2 .menu .dropdown-menu {
+	background: #df1d38;
+	padding: 0;
+	border-radius: 0;
+	border: 0;
+	margin: 19px 0 0;	
+}
+
+#block-menu-block-2 .menu .dropdown-menu li {
+	background: url(../img/sub-menu-arrow.jpg) no-repeat 5px 12px;
+	width: 100%;
+	padding: 0;
+}
+
+#block-menu-block-2 .menu .dropdown-menu li a {
+	background: none;
+	border-bottom: #fff 1px solid;
+	border-right: none;
+	padding: 5px 0 5px 15px;
+	width: 100%;
+	font-size: .8em;
+}
+
+#block-menu-block-2 .menu .dropdown-menu li a:hover {
+	background: url(../img/sub-menu-hover.png) repeat 0 0;
+	text-decoration: none;
+}
+
+#block-menu-block-2 .menu .dropdown-menu li.last a {
+	border: none;
+}
+
+#block-block-6 {
+	margin:38px 0 0 0;
+	float:left;
+}
+
+#block-menu-block-3 {
+	float: left;
+	margin:45px 0 0;
+}
+
+#block-menu-block-3 .menu {
+	margin:0;
+	padding:0;
+}
+
+#block-menu-block-3 .menu li {
+	padding-right: 5px;
+	font-size: 11px;
+	line-height: 11px;
+	padding:20px 0 0 5px;
+	text-transform: uppercase;
+	font-weight: bold;
+	float:left;
+}
+
+#block-menu-block-3 .menu li a {
+	color:#000;
+	text-decoration: underline;
+	border-right:1px solid #000;
+	padding:0 5px 0 0;
+}
+
+#block-menu-block-3 .menu li.first {
+	background: url(../img/red-upsidedown-triangle.png) no-repeat 50% 30%;
+}
+
+#block-menu-block-3 .menu li.last a {
+	border:none;
+}
+
+/* --------------------- Home Styles -------------------------- */
+
+body.front {
+	background: url(../img/background-tile.png) repeat-x;
+}
+
+.front #navbar {
+	width:100%;
+	height:191px !important;
+}
+
+.front .navbar.container {
+	max-width:inherit;
+}
+
+.front #navbar .container {
+	width: 996px !important;
+	margin: 0 auto;
+}
+
+/* -------------------- Sidebar Styles ------------------------ */
+
+.col-sm-3 {
+	width:226px;
+	padding:0;
+}
+
+.not-front .col-sm-3 {
+	margin:16px 0 0;
+}
+
+.region-sidebar-first {
+	padding-top: 6px;
+	width: 225px;
+	height: 385px;
+	background: url(../img/grey-stripe-bg.png);
+	border-radius:0;
+}
+
+.not-front .region-sidebar-first {
+	background:none;
+	border:none;
+	box-shadow:none;
+}
+
+.not-front .region-sidebar-first .block-menu li {
+	border-bottom:1px solid #ddd; 
+}
+
+.not-front .region-sidebar-first .block-menu li a {
+	font-family: MyriadPro-Bold, Helvetica, Arial, sans-serif;
+	color:#000;
+	font-size:1.083em;
+}
+
+.not-front .region-sidebar-first .block-menu li a.active {
+	background-color:#eee;
+}
+
+.region-sidebar-first h2.block-title {
+	margin: 0 0 0 7px;
+	padding-left: 30px;
+	font-family: MyriadPro, Helvetica, Arial, sans-serif;
+	font-weight: normal;
+	text-transform: uppercase;
+	background: url(../img/magnifying-glass.png) no-repeat 0 6px;
+	font-size: 1em;
+}
+
+.region-sidebar-first .cs-store-address {
+	font-size: 11px;
+	margin: 10px 0 10px 40px;
+}
+
+.region-sidebar-first .cs-store-address img {
+	width:140px;
+	height:104px;
+	margin:10px 0 0;
+}
+
+#cs-store-locator-block-form label {
+	float: left;
+	width: 35px;
+	line-height: 22px;
+	margin-right: 5px;
+	text-align: right;
+	text-transform: uppercase;
+	font-size:12px;
+	font-weight:normal;
+}
+
+#cs-store-locator-block-form .form-control {
+	width: 140px;
+	border: none;
+	height: 22px;
+	border-radius: 0;
+	float:left;
+}
+
+#cs-store-locator-block-form .form-item {
+	margin:0;
+	clear:both;
+}
+
+#cs-store-locator-block-form p {
+	display:none;
+}
+
+#cs-store-locator-block-form #edit-submit--2 {
+	padding: 0 4px;
+	margin:5px 0 0;
+	width: 61px;
+	height: 22px;
+	border: none;
+	background: url(../img/btn-search.png);
+	cursor: pointer;
+	font-size: 9px;
+	font-weight: bold;
+	color: #fff;
+	text-transform: uppercase;
+}
+
+#block-cs-store-locator p {
+	display:none;
+}
+
+#block-block-5 {
+	float:right;
+}
+
+#block-block-5 p {
+	margin:7px 0 0;
+}
+
+.menu-block-3 {
+	float:right;
+}
+
+#block-block-6 ul li {
+	float:left;
+}
+
+#block-block-13,
+.not-front #block-cs-store-locator {
+	border:10px solid #ccc;
+	padding:7px;
+	margin:10px 0;
+}
+
+.not-front #block-cs-store-locator .cs-store-address {
+	margin:10px 0;
+}
+
+.not-front #block-cs-store-locator .form-control {
+	width:110px;
+	border: 1px solid #ccc;
+}
+
+.not-front #block-cs-store-locator .cs-store-address img {
+	width:149px;
+}
+
+.not-front #block-cs-store-locator #edit-submit {
+	margin:10px 0 0;
+}
+
+#block-block-13 h2 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color: #d62632;
+	font-size: 0.917em;
+	margin:0;
+	padding:0;
+}
+
+#block-block-13 ul.address {
+	margin:10px 0 0 0;
+	padding:0;
+	list-style-type:none;
+}
+
+#block-block-13 ul.address li {
+	font-size: 0.833em;
+}
+
+#block-block-13 p {
+	margin:0.500em 0;
+}
+
+#block-block-13 .select-store {
+	background: url(../img/link-arrow-icon.png) no-repeat right 7px;
+	font-size:0.833em;
+	color:#000;
+	text-decoration:underline;
+	padding:0 10px 0 0;
+}
+
+/* ----------------- Content Styles --------------------------- */
+
+h1 {
+	 font-family: 'MyriadPro', arial, sans-serif;
+     font-size:1.55em;
+     line-height:30px;
+     color:#D62632;	
+}
+
+p {
+	font-family: 'MyriadPro', arial, sans-serif;
+    font-size:1.125em;
+    line-height:20px;
+    color:#333;
+}
+	
+
+.col-sm-9 {
+	padding:0;
+	width:769px;
+}
+
+.not-front .col-sm-9 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:0.833em;
+	background-color: #f7f7f7;
+	padding:0 30px 30px;
+	margin:16px 0 0;
+}
+
+.front h1.page-header {
+	display:none;
+}
+
+.not-front h1.page-header {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:1.500em;
+	padding:13px 0 10px 0;
+	color:#fff;
+}
+
+.not-front .field-name-body h2,
+.not-front .field-name-body h2 a {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color:#d62632;
+	font-size:1.333em;
+}
+
+.front .field-name-body p {
+	margin:0;
+}
+
+.main-container {
+	width:995px;
+}
+
+.field-name-body ul {
+	list-style:none;
+	padding:0;
+}
+
+li strong {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+}
+
+p {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size: 1.000em;
+}
+
+/* -------------- About Section Styles ------------------------ */
+
+.not-front h1.page-header {
+	border:none;
+	color:#fff;
+	text-transform:uppercase;
+}
+
+.pagination li,
+.pagination li a {
+	position:static;
+	float:none;
+	padding:0;
+	margin:0;
+	line-height:inherit;
+	text-decoration: underline;
+	background-color: transparent;
+	border:none;
+	color:#000;
+}
+
+.pagination li.active a {
+	background:none;
+	color:#d80000;
+}
+
+.pagination li.disabled {
+	display:none;
+}
+
+/* --------------- Giving Back Styles ------------------------- */
+
+.view-giving-back .views-field-title {
+	margin:15px 0;
+}
+
+.view-giving-back .views-field-title a,
+.node-type-giving-back .field-name-title h2 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:1.000em;
+	color:#e35063;
+}
+
+.view-giving-back .views-row {
+	border-bottom: 1px solid #dcdcdc;
+	padding:37px 0 72px 0;
+}
+
+.view-giving-back .views-row-last {
+	border:none;
+}
+
+.views-more-link {
+	color:#a44144;	
+}
+
+/* --------------- Testimonials Styles ------------------------ */
+
+.view-customer-testimonial .views-row {
+	border-bottom: 1px solid #dcdcdc;
+	padding:15px 0 40px 0;
+}
+
+.front .view-customer-testimonial .views-row p {
+	color: #fff;	
+}
+
+.view-customer-testimonial .views-row p {
+	color: #333;	
+}
+
+.view-customer-testimonial .views-row-last {
+	border:none;
+}
+
+.view-customer-testimonial .views-field-nothing,
+.view-customer-testimonial .views-field-created {
+	text-align:right;
+}
+
+.view-customer-testimonial .views-field-nothing {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	margin:10px 0 0;
+}
+
+.node-type-customer-testimonial .field-name-field-name,
+.node-type-customer-testimonial .field-name-field-state {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	float: left;
+	border-right: 1px solid #333;
+	padding: 0 5px 0 0;
+	margin: 0 5px 0 0;
+	
+}
+
+.node-type-customer-testimonial .field-name-field-state {
+	border:none;
+}
+
+.node-type-customer-testimonial .group-testimonial-details {
+	float:right;
+	margin:10px 0 0;
+}
+
+/* --------------- Press Kit Styles --------------------------- */
+
+.press-kit-list-1 {
+	float:left;
+	width:31%;
+}
+
+.press-kit-list-2 {
+	float:left;
+	width:25%;
+	text-align:center;
+	margin:30px 20px 0 0;
+}
+
+.press-kit-list-3 {
+	float:left;
+	width:40%;
+	text-align:center;
+	margin:30px 0 0 0;
+}
+
+.press-kit-list-1 li,
+.press-kit-list-2 li,
+.press-kit-list-3 li {
+	margin:5px 0;
+}
+
+.press-kit-list-1 li a,
+.press-kit-list-2 li a,
+.press-kit-list-3 li a,
+.press-kit-contact-section a {
+	background: url(../img/link-arrow-icon.png) no-repeat right 5px;
+	color:#000;
+	text-decoration:underline;
+	padding: 0 10px 0 0;
+}
+
+.press-kit-contact-section {
+	width:100%;
+	float:left;
+	clear:both;
+	border-top:1px solid #ddd;
+	border-bottom:1px solid #ddd;
+	padding:25px 0;
+	margin:30px 0 0;
+}
+
+.press-kit-contact-section span {
+	font-size:1.333em;
+}
+
+.press-kit-contact-section h2 {
+	margin:0;
+}
+
+/* ------------------- Apps Styles ---------------------------- */
+
+.view-resource-library-app {
+	margin:16px 0 0;
+}
+
+.view-resource-library-app .form-control,
+.view-resource-library-app .webform-component-email .form-email {
+	border: none !important;
+	box-shadow: none;	
+}
+
+.view-resource-library-app .view-filters {
+	float:left;
+	width:20%;
+}
+
+.view-resource-library-app .view-filters label {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	font-size:1.1em;
+}
+
+.view-resource-library-app .view-filters .form-type-checkbox {
+	margin:0.10em 0;
+}
+
+.view-resource-library-app .view-filters .form-checkboxes label {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:0.9em;
+}
+
+.view-resource-library-app .view-filters .views-exposed-widget {
+	width: 190px;
+	padding: .5em 1em .5em 0;
+	border-bottom: 1px solid #ddd;
+}
+
+.view-resource-library-app .view-filters .views-submit-button {
+	border-bottom: none;
+}
+
+.view-resource-library-app .view-filters .form-submit {
+	margin:0;
+	background: #b00000;
+	border: 1px solid #b00000;
+}
+
+.view-resource-library-app .view-content {
+	width:70%;
+	float:left;
+	background-color: #f7f7f7;
+	padding:30px;
+}
+
+.form-control,
+.webform-component-email .form-email {
+	width:auto;
+	height: inherit;
+	padding:0;
+	line-height: inherit;
+	-webkit-box-shadow: none;
+	-webkit-transition: none;
+	transition: none;
+	border: 1px solid #ddd !important;
+}
+
+.panel {
+	margin:0;
+	padding:0;
+	border:none;
+	border-radius: inherit;
+	-webkit-box-shadow: none;
+	box-shadow: inherit;
+}
+
+.form-control input.form-control {
+	float:left;
+	margin:0 5px 0 0;
+}
+
+.view-resource-library-app .views-row {
+	float:left;
+	width:48%;
+	margin: 0 0 35px 0;
+}
+
+.view-resource-library-app .views-field-title {
+	font-weight: bold;
+}
+
+.view-resource-library-app .views-field-field-url {
+	float:left;
+	width:50%;
+	margin:10px 0 0;
+}
+
+.view-resource-library-app .views-field-field-url a {
+	background: url(../img/btn-learn-more.png) no-repeat 0 0;
+	display: block;
+	text-indent: -9999px;
+}
+
+.view-resource-library-app .views-field-field-icon {
+	float:left;
+	margin:0 15px 0 0;
+}
+
+.view-resource-library-app .panel-heading {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	border: none;
+	background-color: transparent;
+	padding: 0;
+	font-size: 1.500em;
+}
+
+.view-resource-library-app label {
+	font-weight:normal;
+}
+
+/* ---------------- Plans Styles ------------------------------ */
+
+.table1 {
+	background-color:#ECEDEE;
+	padding: 2px;
+	}
+	
+.table1 td {
+	padding: 3px 10px; 
+	}
+
+.text1 {
+	text-transform:uppercase;
+	font-weight:bold;
+	vertical-align:text-top}
+
+.text2 {
+	text-transform: capitalize;
+	font-weight:bold;
+	vertical-align:text-top}
+	
+.text3 {
+	text-transform: uppercase;
+	font-weight:bold;
+	vertical-align:text-top}
+	
+.text4 {
+	text-transform: uppercase;
+	font-size:10px;
+	color:#0066FF;
+	vertical-align:text-top}
+
+.text5 {
+	text-transform: uppercase;
+	font-size:10px;
+	color:#fff;
+	vertical-align:text-top}
+
+.text6 {
+	text-transform: uppercase;
+	font-size:14px;
+	color:#F00;
+	vertical-align:text-top}
+	
+.text7 {
+	text-transform: uppercase;
+	font-size:10px;
+	color:#000;
+	vertical-align:text-top;
+	text-decoration:line-through}
+
+.table1 a:link {
+	text-transform: uppercase;
+	font-size:10px;
+	color:#0066FF;
+	font-style:normal;}
+
+.table1 a:link {
+	text-transform: uppercase;
+	font-size:10px;
+	color:#0066FF;
+	font-style:normal;
+	text-decoration: none;
+	}    /* unvisited link */
+	
+.table1 a:visited {
+	text-transform: uppercase;
+	font-size:10px;
+	color:#0066FF;
+	font-style:normal;
+	text-decoration: none;
+	} /* visited link */
+	
+.table1 a:hover {
+	text-transform: uppercase;
+	font-size:10px;
+	color:#0066FF;
+	font-style:normal;
+	text-decoration: none;
+	}   /* mouse over link */
+	
+.table1 a:active {
+	text-transform: uppercase;
+	font-size:10px;
+	color:#0066FF;
+	font-style:normal;
+	text-decoration: none;}  /* selected link */	
+
+.td1 {
+	background-color:#585A5D;
+	font-weight: bold;
+	font-size: 16px;
+	color:#fff;
+	padding: 2px;
+	}
+
+.td2 {
+	background-color:#fff;
+	}
+
+.td3 {
+	background-color:#999;
+}
+
+/* ------------ Plans Calculator Styles ----------------------- */
+
+.page-verizon-plans #block-system-main {
+	position: relative;	
+}
+
+.page-verizon-plans .col-sm-12 {
+	margin: 32px 0 0;
+}	
+
+.page-verizon-plans #cs-plan-calculator-form .cs-device-type {
+	float: left;
+	width: 35%;
+	padding: 1em 0 0;
+	border-bottom: 1px solid #ddd;
+	margin: 0 0 1em 0;
+}
+
+.page-verizon-plans #cs-plan-calculator-form .cs-device-type .panel-body {
+	padding: 1em 0;
+	clear:none;	
+}
+
+.page-verizon-plans #cs-plan-calculator-form .help-block {
+	font-family: 'MyriadPro-Regular', Helvetica, sans-serif;
+	color: #d62632;
+	border-bottom: 1px solid #ddd;
+	padding: 0 0 .75em 0;
+}
+
+.page-verizon-plans #cs-plan-calculator-form .panel-body label,
+.page-verizon-plans #cs-plan-calculator-form .form-item-data-package label,
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total label,
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total-edge label {
+	font-family: 'MyriadPro-Regular', Helvetica, sans-serif;
+	font-weight: normal;
+	/*float:left;*/
+}
+
+.page-verizon-plans #cs-plan-calculator-form .form-item-data-package label,
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total label,
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total-edge label {
+	float:none;	
+}
+
+.page-verizon-plans #cs-plan-calculator-form .panel-body .form-select {
+	float: right;	
+}
+
+.page-verizon-plans #cs-plan-calculator-form .panel-body .form-type-select {
+	display: block;
+	width: 100%;
+	float: left;
+}
+
+.page-verizon-plans #cs-plan-calculator-form .panel-heading {
+	display: none;
+}
+
+.page-verizon-plans #cs-plan-calculator-form .form-item-data-package {
+	width: 35%;
+	border-top: 1px solid #ddd;
+	padding: .75em 0 0;	
+}
+
+.page-verizon-plans #cs-plan-calculator-form .form-item-data-package .form-select {
+	float: right;	
+}
+
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total,
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total-edge {
+	float: right;
+	border: 7px solid #ddd;
+	padding: 1.5em;
+}
+
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total {
+	position: absolute;
+	top: 3em;
+	right: 0;
+	width: 20em;
+}
+
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total-edge label,
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total label {
+	float: left;	
+}
+
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total-edge .form-control,
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total .form-control {
+	float: right;
+	padding: .15em .5em;
+	width: 25%;
+	text-align: center;
+}
+
+.page-verizon-plans #cs-plan-calculator-form .form-item-monthly-total-edge {
+	position: absolute;
+	top: 10.5em;
+	right: 0;
+	width: 20em;
+}
+
+/* ---------- Locations Landing Page Styles ------------------- */
+
+.page-locations #block-system-main {
+	padding:10px 0 0;
+}
+
+.page-locations #block-system-main h3 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size: 1.000em;
+	color: #e35063;
+	text-transform: uppercase;
+	margin:10px 0 5px 0;
+}
+
+.page-locations #block-system-main td a {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	color:#000;
+}
+
+.page-store-location h3.testimonial {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	color:#b00000;
+}
+
+.page-store-location .node-readmore a {
+	background: url(../img/link-arrow-icon-red.png) 100% 6px no-repeat;
+	color: #b00000;
+	text-decoration: underline;
+	display: block;
+	min-width: 115%;
+}
+
+.page-store-location .field-name-field-name {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+}
+
+/* ------------- Single Location Styles ----------------------- */
+
+.page-store-location #cs-store-list {
+	float:left;
+	background-color:#fff;
+	padding: 15px;
+	margin:20px 0 0;
+	-moz-border-radius-topleft: 20px;
+	-moz-border-radius-topright: 0px;
+	-moz-border-radius-bottomright: 0px;
+	-moz-border-radius-bottomleft: 20px;
+	-webkit-border-top-left-radius: 20px;
+	-webkit-border-top-right-radius: 0px;
+	-webkit-border-bottom-right-radius: 0px;
+	-webkit-border-bottom-left-radius: 20px;
+	border-radius: 20px 0px 0px 20px;
+}
+
+.page-store-location #block-system-main p {
+	float:left;
+	width:100%;
+}
+
+.page-store-location #googmap {
+	width: 520px !important;
+	margin:20px 0 0;
+}
+
+.page-store-location .gm-style-iw {
+	width:133px !important;
+}
+
+.page-store-location .gm-style-iw {
+	float:left;
+	width:100%;
+}
+
+.page-store-location .cs-store-photo {
+	float:left;
+	width:100%;
+}
+
+.page-store-location .cs-store-name {
+	display:none;
+}
+
+.gm-style .gm-style-iw, .gm-style .gm-style-iw a, 
+.gm-style .gm-style-iw span, .gm-style .gm-style-iw label, 
+.gm-style .gm-style-iw div {
+	font-size:1.000em;
+}
+
+/* ----------------- Product Search Page Styles ------------------- */
+
+.page-phones .region-content {
+	margin: 32px 0 0;
+}
+
+page-phones .breadcrumb {
+	display: none;	
+}
+
+.page-phones .breadcrumb {
+	display:none;	
+}
+
+.view-phones .view-header {
+	padding: 0 25px 25px 15px;
+	float: right;
+	background: #f7f7f7;
+}
+
+.view-phones .text-center {
+	clear: both;
+	width: 78%;
+	float: right;
+}
+
+.view-phones .view-header img {
+	padding: 0 0 25px 0;
+	border-bottom: 1px solid #ddd;
+}
+
+.view-phones .form-control,
+.view-phones .webform-component-email .form-email {
+	border: none !important;
+	box-shadow: none;	
+}
+
+.page-phones .view-filters {
+	float:left;
+	width:20%;
+}
+
+.page-phones .view-filters label {
+	font-family: 'MyriadPro-Bold', Arial, Helvetica, sans-serif;
+	font-size:1.1em;
+}
+
+.page-phones .view-filters .form-type-checkbox {
+	margin:0.10em 0;
+}
+
+.page-phones .view-filters .form-checkboxes label {
+	font-family: 'MyriadPro', Arial, Helvetica, sans-serif;
+	font-size:0.9em;
+}
+
+.page-phones .view-filters .views-exposed-widget {
+	width: 190px;
+	padding: .5em 1em .5em 0;
+	border-bottom: 1px solid #ddd;
+}
+
+.page-phones .view-filters .views-submit-button {
+	border-bottom: none;
+}
+
+.page-phones .view-filters .form-submit {
+	margin:0;
+	background: #b00000;
+	border: 1px solid #b00000;
+}
+
+.page-phones .view-content {
+	background: #f7f7f7;
+	float: right;
+	width: 78%;
+	padding: 0 15px;
+}
+
+.view-phones .views-row {
+	float: left;
+	width: 45%;
+	margin: 25px 10px;
+	min-height:340px;
+} 
+
+.view-phones .views-row .views-field-uc-product-image {
+	float:left;
+	margin:0 24px 0 0;
+}
+
+.view-phones .views-row .views-field-field-phone-key-features {
+	float: left;
+	height: 150px;
+	width: 30px;
+	margin:0 10px 0 0;
+	font-size:0.8em;
+}
+
+.view-phones .views-row .views-field-title {
+	float: left;
+	width: 53%;
+}
+
+.view-phones .views-row .views-field-title a {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	font-size: 1em;
+	font-style: normal;
+	color: #d62632;
+	margin: 0 0 10px 0;
+}
+
+.view-phones .views-row .views-field-body,
+.view-phones .views-row .views-field-sell-price,
+.view-phones .views-row .views-field-view-node {
+	margin:0 0 0 150px;
+}
+
+.view-phones .views-row .views-field-sell-price {
+	color:#b00000;
+	font-size:1.3em;
+}
+
+.view-phones .views-row .views-field-body {
+	margin:0 0 10px 150px;
+	font-size:0.8em;
+}
+
+.view-phones .views-row .views-field-view-node {
+	margin:10px 0 0 150px;
+}
+
+.view-phones .views-row .views-field-view-node a {
+	background: url(../img/btn-learn-more.png) no-repeat;
+	display:block;
+	text-indent:-9999px;
+}
+
+/* ----------------- Product Detail Styles ------------------- */
+
+/*.node-type-phone .col-sm-12 {
+	margin:45px 0 0;
+}
+
+.node-type-phone .field-description-section-wrapper {
+  float:left;
+  width:300px;
+}
+
+.node-type-phone h3 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color:#D62632;
+}
+
+.node-type-phone .field-name-uc-product-image {
+	width:230px;
+	float:left;
+	margin:0 0 1em 0;
+}
+
+.node-type-phone .field-name-field-manufacturer,
+.node-type-phone .add-to-cart {
+	float:left;
+	width:475px;
+}
+
+.node-type-phone .add-to-cart {
+	margin:40px 0 0;
+}
+
+.node-type-phone .sell-price {
+	width:auto;
+	float:left;
+	background: #d62632;
+	padding:23px;
+}
+
+.node-type-phone .sell-price .uc-price-label {
+	display:none;
+}
+
+.node-type-phone .sell-price .uc-price {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:3.5em;
+	color:#fff;
+}
+
+.node-type-phone #uc-product-add-to-cart-form-1077 {
+	float:left;
+	width:375px;
+}
+
+.node-type-phone #node_phone_full_group_highlights_features {
+	clear:both;
+	margin:60px 0 0;
+}
+
+.node-type-phone .node-add-to-cart {
+	background: url(../img/add_to_cart_btn.jpg) no-repeat;
+	height: 39px;
+	width: 139px;
+	border: none;
+	text-indent: -9999px;
+}
+
+.node-type-phone legend {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:1.3em;
+}
+
+.node-type-phone .panel-title {
+	font-size:1em;
+}
+
+.node-type-phone .field-name-field-product-image-2,
+.node-type-phone .field-name-field-product-image-3 {
+	text-align:center;
+}
+
+.node-type-phone .field-name-field-product-image-2,
+.node-type-phone .field-name-field-additional-description {
+	float:left;
+	width:48%;
+}
+
+.node-type-phone .field-name-body,
+.node-type-phone .field-name-field-product-image-3 {
+	float:right;
+	width:48%;
+}
+
+#node_phone_full_group_specifications_wrap h3 {
+	border-bottom:1px solid #ddd;
+	padding:0 0 10px 0;
+	font-size:1.3em;
+}
+
+#node_phone_full_group_specifications_wrap h3 span {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color:#000;
+}
+
+#node_phone_full_group_specifications_wrap h4 {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+}
+
+#node_phone_full_group_pricing {
+  width: 300px;
+  float:left;
+}
+
+.field-name-nearest-store-block-wrapper {
+  float:right;
+  width:350px;
+}
+
+.field-name-nearest-store-block-wrapper h4 {
+  color:#d62632;
+  margin: 0.8em 0 0.4em 0;
+  float:left;
+  width:100%;
+}
+
+.field-name-nearest-store-block-wrapper h4 span {
+  color:#980619;
+  font-size:2.8em;
+}
+
+.field-name-nearest-store-block-wrapper h6 {
+  background: #d62632;
+  padding: 5px;
+  margin: 0;
+  color:#fff;
+  float:left;
+  width:30px;
+}
+
+.node-type-phone .group-highlights-features {
+  clear:both;
+}
+
+.node-type-phone .field-name-nearest-store-block {
+  margin:0 0 2em 0;
+}*/
+
+.node-type-phone .col-sm-12 {
+	margin:45px 0 0;
+}
+
+.node-type-phone .field-description-section-wrapper {
+  float:left;
+  width:300px;
+}
+
+.node-type-phone h3 {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	color:#D62632;
+	margin: 1em 0 .3em 0;
+}
+
+.node-type-phone .field-name-uc-product-image {
+	width:230px;
+	float:left;
+	margin:0 0 1em 0;
+}
+
+.node-type-phone .field-name-field-manufacturer,
+.node-type-phone .add-to-cart {
+	float:left;
+	width:475px;
+}
+
+.node-type-phone .add-to-cart {
+	margin:40px 0 0;
+}
+
+.node-type-phone .sell-price {
+	width:auto;
+	float:left;
+	background: #d62632;
+	padding:23px;
+}
+
+.node-type-phone .sell-price .uc-price-label {
+	display:none;
+}
+
+.node-type-phone .sell-price .uc-price {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	font-size:3.5em;
+	color:#fff;
+}
+
+.node-type-phone #uc-product-add-to-cart-form-1077 {
+	float:left;
+	width:375px;
+}
+
+.node-type-phone #node_phone_full_group_highlights_features {
+	clear:both;
+	margin:60px 0 0;
+}
+
+.node-type-phone .node-add-to-cart {
+	background: url(../img/add_to_cart_btn.jpg) no-repeat;
+	height: 39px;
+	width: 139px;
+	border: none;
+	text-indent: -9999px;
+}
+
+.node-type-phone .group-highlights-features legend {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	font-size:1.3em;
+	background: none;
+	border: none;
+}
+
+.node-type-phone .group-highlights-features .panel-title legend {
+  padding: 0 15px 5px 0;
+  border-bottom: 1px solid #ddd;
+  
+}  
+
+.node-type-phone .panel-title {
+	font-size:1em;
+}
+
+.node-type-phone .group-highlights-features .field-name-field-product-image-2,
+.node-type-phone .group-highlights-features .field-name-field-product-image-3 {
+	text-align:center;
+}
+
+.node-type-phone .field-name-field-product-image-2,
+.node-type-phone .field-name-field-additional-description {
+	float:left;
+	width:48%;
+}
+
+.node-type-phone .field-name-body,
+.node-type-phone .field-name-field-product-image-3 {
+	float:right;
+	width:48%;
+}
+
+#node_phone_full_group_specifications_wrap h3 {
+	border-bottom:1px solid #ddd;
+	padding:0 0 10px 0;
+	font-size:1.3em;
+}
+
+#node_phone_full_group_specifications_wrap h3 span {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	color:#000;
+}
+
+#node_phone_full_group_specifications_wrap h4 {
+	font-family: 'VerizonApexBold', Helvetica, sans-serif;
+}
+
+#node_phone_full_group_pricing {
+  width: 300px;
+  float:left;
+}
+
+.field-name-nearest-store-block-wrapper {
+  float:right;
+  width:350px;
+}
+
+.field-name-nearest-store-block-wrapper h4 {
+  color:#d62632;
+  margin: 0.8em 0 0.4em 0;
+  float:left;
+  width:100%;
+}
+
+.field-name-nearest-store-block-wrapper h4 span {
+  color:#980619;
+  font-size:2.8em;
+}
+
+.field-name-nearest-store-block-wrapper h6 {
+  background: #d62632;
+  padding: 5px;
+  margin: 0;
+  color:#fff;
+  float:left;
+  width:30px;
+}
+
+.node-type-phone .group-highlights-features {
+  	clear:both;
+	margin:60px 0 0
+}
+
+.node-type-phone .field-name-nearest-store-block {
+  margin:0 0 2em 0;
+}
+
+/* ----------------- Tablet Detail Styles ------------------- */
+
+.node-type-tablet .col-sm-12 {
+	margin:45px 0 0;
+}
+
+.node-type-tablet h3 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color:#D62632;
+}
+
+.node-type-tablet .field-description-section-wrapper {
+	float: left;
+	width: 300px;
+}
+
+.node-type-tablet .field-name-uc-product-image {
+	width:230px;
+	float:left;
+}
+
+.node-type-tablet .field-name-uc-product-image img {
+	max-width: 200px;
+	height: auto;
+}
+
+.node-type-tablet #node-tablet-full-group-pricing {
+	float: left;
+	width: 350px;
+}
+
+.node-type-tablet .field-name-field-manufacturer,
+.node-type-tablet .add-to-cart {
+	float:left;
+	width:475px;
+}
+
+.node-type-tablet .add-to-cart {
+	margin:40px 0 0;
+}
+
+.node-type-tablet .sell-price {
+	width:auto;
+	float:left;
+	background: #d62632;
+	padding:23px;
+}
+
+.node-type-tablet .sell-price .uc-price-label {
+	display:none;
+}
+
+.node-type-tablet .sell-price .uc-price {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:3.5em;
+	color:#fff;
+}
+
+.node-type-tablet #edit-submit-1166 {
+	float:left;
+	width:375px;
+}
+
+.node-type-tablet .group-highlights-features {
+	clear:both;
+	margin:60px 0 0;
+}
+
+.node-type-tablet .node-add-to-cart {
+	background: url(../img/add_to_cart_btn.jpg) no-repeat;
+	height: 39px;
+	width: 139px;
+	border: none;
+	text-indent: -9999px;
+}
+
+.node-type-tablet .group-highlights-features2 legend {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:1.3em;
+}
+
+.node-type-tablet .group-highlights-features2 .panel-title {
+	font-size:1em;
+}
+
+.node-type-tablet .group-highlights-features2 .field-name-field-product-image-2,
+.node-type-tablet .group-highlights-features2 .field-name-field-product-image-3 {
+	text-align:center;
+}
+
+#node_tablet_full_group_specifications_wrap h3 {
+	border-bottom:1px solid #ddd;
+	padding:0 0 10px 0;
+	font-size:1.3em;
+}
+
+#node_tablet_full_group_specifications_wrap h3 span {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color:#000;
+}
+
+#node_tablet_full_group_specifications_wrap h4 {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+}
+
+/* ----------------- Accessory Landing Styles ------------------- */
+
+.page-accessories .region-content {
+	margin: 32px 0 0;
+}
+
+.view-accessories- .view-header {
+	padding: 0 25px 25px 15px;
+	float: right;
+	background: #f7f7f7;
+}
+
+.view-accessories- .text-center {
+	clear: both;
+	width: 78%;
+	float: right;
+}
+
+.view-accessories- .view-header img {
+	padding: 0 0 25px 0;
+	border-bottom: 1px solid #ddd;
+}
+
+.view-accessories- .form-control,
+.view-accessories- .webform-component-email .form-email {
+	border: none !important;
+	box-shadow: none;	
+}
+
+.view-accessories- .view-filters {
+	float:left;
+	width:20%;
+}
+
+.view-accessories- .view-filters label {
+	font-family: 'MyriadPro-Bold', Arial, Helvetica, sans-serif;
+	font-size:1.1em;
+}
+
+.view-accessories- .view-filters .form-type-checkbox {
+	margin:0.10em 0;
+}
+
+.view-accessories- .view-filters .form-checkboxes label {
+	font-family: 'MyriadPro', Arial, Helvetica, sans-serif;
+	font-size:0.9em;
+}
+
+.view-accessories- .view-filters .views-exposed-widget {
+	width: 190px;
+	padding: .5em 1em .5em 0;
+	border-bottom: 1px solid #ddd;
+}
+
+.view-accessories- .view-filters .views-submit-button {
+	border-bottom: none;
+}
+
+.view-accessories- .view-filters .form-submit {
+	margin:0;
+	background: #b00000;
+	border: 1px solid #b00000;
+}
+
+.view-accessories- .view-content {
+	background: #f7f7f7;
+	float: right;
+	width: 78%;
+	padding: 0 15px;
+}
+
+.view-accessories- .views-row {
+	float: left;
+	width: 45%;
+	margin: 25px 10px;
+	min-height:340px;
+} 
+
+.view-accessories- .views-row .views-field-uc-product-image {
+	float:left;
+	margin:0 24px 0 0;
+}
+
+.view-accessories- .views-row .views-field-field-phone-key-features {
+	float: left;
+	height: 150px;
+	width: 30px;
+	margin:0 10px 0 0;
+	font-size:0.8em;
+}
+
+.view-accessories- .views-row .views-field-title {
+	float: left;
+	width: 53%;
+}
+
+.view-accessories- .views-row .views-field-title a {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	font-size: 1em;
+	font-style: normal;
+	color: #d62632;
+	margin: 0 0 10px 0;
+}
+
+.view-accessories- .views-row .views-field-body,
+.view-accessories- .views-row .views-field-sell-price,
+.view-accessories- .views-row .views-field-view-node {
+	margin:0 0 0 150px;
+}
+
+.view-accessories- .views-row .views-field-sell-price {
+	color:#b00000;
+	font-size:1.3em;
+}
+
+.view-accessories- .views-row .views-field-body {
+	margin:0 0 10px 150px;
+	font-size:0.8em;
+}
+
+.view-accessories- .views-row .views-field-view-node {
+	margin:10px 0 0 150px;
+}
+
+.view-accessories- .views-row .views-field-view-node a {
+	background: url(../img/btn-learn-more.png) no-repeat;
+	display:block;
+	text-indent:-9999px;
+}
+
+/* ----------------- Accessory Detail Styles ------------------- */
+
+.node-type-accessory .col-sm-12 {
+	margin:45px 0 0;
+}
+
+.node-type-accessory h3 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color:#D62632;
+}
+
+.node-type-accessory .field-description-section-wrapper {
+	float: left;
+	width: 300px;
+}
+
+.node-type-accessory .field-name-uc-product-image {
+	width:230px;
+	float:left;
+}
+
+.node-type-accessory .field-name-uc-product-image img {
+	max-width: 200px;
+	height: auto;
+}
+
+.node-type-accessory #node-tablet-full-group-pricing {
+	float: left;
+	width: 350px;
+}
+
+.node-type-accessory .field-name-field-manufacturer,
+.node-type-accessory .add-to-cart {
+	float:left;
+	width:475px;
+}
+
+.node-type-accessory .add-to-cart {
+	margin:40px 0 0;
+}
+
+.node-type-accessory .sell-price {
+	width:auto;
+	float:left;
+	background: #d62632;
+	padding:23px;
+}
+
+.node-type-accessory .sell-price .uc-price-label {
+	display:none;
+}
+
+.node-type-accessory .sell-price .uc-price {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:3.5em;
+	color:#fff;
+}
+
+.node-type-accessory #edit-submit-1166 {
+	float:left;
+	width:375px;
+}
+
+.node-type-accessory .group-highlights-features2 {
+	clear:both;
+	margin:60px 0 0;
+}
+
+.node-type-accessory .node-add-to-cart {
+	background: url(../img/add_to_cart_btn.jpg) no-repeat;
+	height: 39px;
+	width: 139px;
+	border: none;
+	text-indent: -9999px;
+}
+
+.node-type-accessory .group-highlights-features2 legend {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:1.3em;
+	background: none;
+	border: none;
+}
+
+.node-type-accessory .group-highlights-features2 .panel-title legend {
+  padding: 0 15px 5px 15px;
+  border-bottom: 1px solid #ddd;
+  
+}  
+
+.node-type-accessory .group-highlights-features2 .panel-title {
+	font-size:1em;
+}
+
+.node-type-accessory .group-highlights-features2 .field-name-field-product-image-2,
+.node-type-accessory .group-highlights-features2 .field-name-field-product-image-3 {
+	text-align:center;
+}
+
+#node_tablet_full_group_specifications_wrap h3 {
+	border-bottom:1px solid #ddd;
+	padding:0 0 10px 0;
+	font-size:1.3em;
+}
+
+#node_tablet_full_group_specifications_wrap h3 span {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color:#000;
+}
+
+#node_tablet_full_group_specifications_wrap h4 {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+}
+
+
+
+/* ----------------- Internet Device Detail Styles ------------------- */
+
+/*.node-type-internet-device .col-sm-12 {
+	margin:45px 0 0;
+}
+
+.node-type-internet-device h3 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color:#D62632;
+}
+
+.node-type-internet-device .field-description-section-wrapper {
+	float: left;
+	width: 300px;
+}
+
+.node-type-internet-device .field-name-uc-product-image {
+	width:230px;
+	float:left;
+}
+
+.node-type-internet-device .field-name-uc-product-image img {
+	max-width: 200px;
+	height: auto;
+}
+
+.node-type-internet-device #node-tablet-full-group-pricing {
+	float: left;
+	width: 350px;
+}
+
+.node-type-internet-device .field-name-field-manufacturer,
+.node-type-internet-device .add-to-cart {
+	float:left;
+	width:475px;
+}
+
+.node-type-internet-device .add-to-cart {
+	margin:40px 0 0;
+}
+
+.node-type-internet-device .sell-price {
+	width:auto;
+	float:left;
+	background: #d62632;
+	padding:23px;
+}
+
+.node-type-internet-device .sell-price .uc-price-label {
+	display:none;
+}
+
+.node-type-internet-device .sell-price .uc-price {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:3.5em;
+	color:#fff;
+}
+
+.node-type-internet-device #edit-submit-1166 {
+	float:left;
+	width:375px;
+}
+
+.node-type-internet-device .group-highlights-features2 {
+	clear:both;
+	margin:60px 0 0;
+}
+
+.node-type-internet-device .node-add-to-cart {
+	background: url(../img/add_to_cart_btn.jpg) no-repeat;
+	height: 39px;
+	width: 139px;
+	border: none;
+	text-indent: -9999px;
+}
+
+.node-type-internet-device .group-highlights-features2 legend {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:1.3em;
+}
+
+.node-type-internet-device .group-highlights-features2 .panel-title {
+	font-size:1em;
+}
+
+.node-type-internet-device .group-highlights-features2 .field-name-field-product-image-2,
+.node-type-accesinternet-devicesory .group-highlights-features2 .field-name-field-product-image-3 {
+	text-align:center;
+}
+
+#node_tablet_full_group_specifications_wrap h3 {
+	border-bottom:1px solid #ddd;
+	padding:0 0 10px 0;
+	font-size:1.3em;
+}
+
+#node_tablet_full_group_specifications_wrap h3 span {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color:#000;
+}
+
+#node_tablet_full_group_specifications_wrap h4 {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+}*/
+
+.node-type-internet-device .col-sm-12 {
+	margin:45px 0 0;
+}
+
+.node-type-internet-device h3 {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	color:#D62632;
+}
+
+.node-type-internet-device .field-description-section-wrapper {
+	float: left;
+	width: 300px;
+}
+
+.node-type-internet-device .field-name-uc-product-image {
+	width:230px;
+	float:left;
+}
+
+.node-type-internet-device .field-name-uc-product-image img {
+	max-width: 200px;
+	height: auto;
+}
+
+.node-type-internet-device #node-tablet-full-group-pricing {
+	float: left;
+	width: 350px;
+}
+
+.node-type-internet-device .field-name-field-manufacturer,
+.node-type-internet-device .add-to-cart {
+	float:left;
+	width:475px;
+}
+
+.node-type-internet-device .add-to-cart {
+	margin:40px 0 0;
+}
+
+.node-type-internet-device .sell-price {
+	width:auto;
+	float:left;
+	background: #d62632;
+	padding:23px;
+}
+
+.node-type-internet-device .sell-price .uc-price-label {
+	display:none;
+}
+
+.node-type-internet-device .sell-price .uc-price {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	font-size:3.5em;
+	color:#fff;
+}
+
+.node-type-internet-device #edit-submit-1166 {
+	float:left;
+	width:375px;
+}
+
+.node-type-internet-device .group-highlights-features2 {
+	clear:both;
+	margin:60px 0 0;
+}
+
+.node-type-internet-device .node-add-to-cart {
+	background: url(../img/add_to_cart_btn.jpg) no-repeat;
+	height: 39px;
+	width: 139px;
+	border: none;
+	text-indent: -9999px;
+}
+
+.node-type-internet-device .group-highlights-features2 legend {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	font-size:1.3em;
+	background: none;
+	border: none
+}
+
+.node-type-internet-device .group-highlights-features2 .panel-title legend {
+  padding: 0 15px 5px 15px;
+  border-bottom: 1px solid #ddd;
+}
+.node-type-internet-device .group-highlights-features2 .panel-title {
+	font-size:1em;
+}
+
+.node-type-internet-device .group-highlights-features2 .field-name-field-product-image-2,
+.node-type-accesinternet-devicesory .group-highlights-features2 .field-name-field-product-image-3 {
+	text-align:center;
+}
+
+#node_tablet_full_group_specifications_wrap h3 {
+	border-bottom:1px solid #ddd;
+	padding:0 0 10px 0;
+	font-size:1.3em;
+}
+
+#node_tablet_full_group_specifications_wrap h3 span {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	color:#000;
+}
+
+#node_tablet_full_group_specifications_wrap h4 {
+	font-family: 'VerizonApexBold', Helvetica, sans-serif;
+}
+
+/* ----------------- Home Solution Detail Styles ------------------- */
+
+.node-type-home-solution .col-sm-12 {
+	margin:45px 0 0;
+}
+
+.node-type-home-solution h3 {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	color:#D62632;
+}
+
+.node-type-home-solution .field-description-section-wrapper {
+	float: left;
+	width: 300px;
+}
+
+.node-type-home-solution .field-name-uc-product-image {
+	width:230px;
+	float:left;
+}
+
+.node-type-home-solution .field-name-uc-product-image img {
+	max-width: 200px;
+	height: auto;
+}
+
+.node-type-home-solution #node-tablet-full-group-pricing {
+	float: left;
+	width: 350px;
+}
+
+.node-type-home-solution .field-name-field-manufacturer,
+.node-type-home-solution .add-to-cart {
+	float:left;
+	width:475px;
+}
+
+.node-type-home-solution .add-to-cart {
+	margin:40px 0 0;
+}
+
+.node-type-home-solution .sell-price {
+	width:auto;
+	float:left;
+	background: #d62632;
+	padding:23px;
+}
+
+.node-type-home-solution .sell-price .uc-price-label {
+	display:none;
+}
+
+.node-type-home-solution .sell-price .uc-price {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	font-size:3.5em;
+	color:#fff;
+}
+
+.node-type-home-solution #edit-submit-1166 {
+	float:left;
+	width:375px;
+}
+
+.node-type-home-solution .group-highlights-features {
+	clear:both;
+	margin:60px 0 0;
+}
+
+.node-type-home-solution .node-add-to-cart {
+	background: url(../img/add_to_cart_btn.jpg) no-repeat;
+	height: 39px;
+	width: 139px;
+	border: none;
+	text-indent: -9999px;
+}
+
+.node-type-home-solution .group-highlights-features legend {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	font-size:1.3em;
+	background: none;
+	border: none
+}
+
+.node-type-home-solution .group-highlights-features .panel-title legend {
+  padding: 0 15px 5px 15px;
+  border-bottom: 1px solid #ddd;
+}
+.node-type-home-solution .group-highlights-features .panel-title {
+	font-size:1em;
+}
+
+.node-type-home-solution .group-highlights-features .field-name-field-product-image-2,
+.node-type-home-solution .group-highlights-features .field-name-field-product-image-3 {
+	text-align:center;
+}
+
+#node_home-solution_full_group_specifications_wrap h3 {
+	border-bottom:1px solid #ddd;
+	padding:0 0 10px 0;
+	font-size:1.3em;
+}
+
+#node_home-solution_full_group_specifications_wrap h3 span {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	color:#000;
+}
+
+#node_home-solution_full_group_specifications_wrap h4 {
+	font-family: 'VerizonApexBold', Helvetica, sans-serif;
+}
+
+/* ----------------- Tablet Detail Styles ------------------- */
+
+.node-type-tablet .col-sm-12 {
+	margin:45px 0 0;
+}
+
+.node-type-tablet h3 {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	color:#D62632;
+	margin: 1em 0 .3em 0;
+}
+
+.node-type-tablet .field-description-section-wrapper {
+	float: left;
+	width: 300px;
+}
+
+.node-type-tablet .field-name-uc-product-image {
+	width:230px;
+	float:left;
+}
+
+.node-type-tablet .field-name-uc-product-image img {
+	max-width: 200px;
+	height: auto;
+}
+
+.node-type-tablet #node-tablet-full-group-pricing {
+	float: left;
+	width: 350px;
+}
+
+.node-type-tablet .field-name-field-manufacturer,
+.node-type-tablet .add-to-cart {
+	float:left;
+	width:475px;
+}
+
+.node-type-tablet .add-to-cart {
+	margin:40px 0 0;
+}
+
+.node-type-tablet .sell-price {
+	width:auto;
+	float:left;
+	background: #d62632;
+	padding:23px;
+}
+
+.node-type-tablet .sell-price .uc-price-label {
+	display:none;
+}
+
+.node-type-tablet .sell-price .uc-price {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	font-size:3.5em;
+	color:#fff;
+}
+
+.node-type-tablet #edit-submit-1166 {
+	float:left;
+	width:375px;
+}
+
+.node-type-tablet .group-highlights-features {
+	clear:both;
+	margin:60px 0 0;
+}
+
+.node-type-tablet .node-add-to-cart {
+	background: url(../img/add_to_cart_btn.jpg) no-repeat;
+	height: 39px;
+	width: 139px;
+	border: none;
+	text-indent: -9999px;
+}
+
+.node-type-tablet .group-highlights-features legend {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	font-size:1.3em;
+	background: none;
+	border: none;;
+}
+
+.node-type-tablet .group-highlights-features .panel-title legend {
+  padding: 0 15px 5px 15px;
+  border-bottom: 1px solid #ddd;
+  
+}
+.node-type-tablet .group-highlights-features .panel-title {
+	font-size:1em;
+}
+
+.node-type-tablet .group-highlights-features .field-name-field-product-image-2,
+.node-type-tablet .group-highlights-features .field-name-field-product-image-3 {
+	text-align:center;
+}
+
+#node_tablet_full_group_specifications_wrap h3 {
+	border-bottom:1px solid #ddd;
+	padding:0 0 10px 0;
+	font-size:1.3em;
+}
+
+#node_tablet_full_group_specifications_wrap h3 span {
+	font-family: 'VerizonApexBook', Helvetica, sans-serif;
+	color:#000;
+}
+
+#node_tablet_full_group_specifications_wrap h4 {
+	font-family: 'VerizonApexBold', Helvetica, sans-serif;
+}
+
+/* -------------- Regional Director Styles -------------------- */
+
+.node-type-splash-page .field-name-body {
+	margin: 30px 0 0;
+}
+
+.node-type-splash-page .field-name-body td a {
+	color:#333;
+	text-decoration: underline;
+}
+
+.node-type-regional-director .field-name-field-market {
+	color: #b00000;
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	font-size: 1.5em;
+	margin: 10px 0 15px;
+}
+
+.node-type-regional-director .field-name-field-rd-image {
+	float: left;
+	margin: 0 20px 0 0;
+}
+
+.node-type-regional-director .field-name-field-rd-quote {
+	background: url(../img/regional-director-testimonial-bg.jpg) repeat 0 0;
+	float: right;
+	min-height: 256px;
+	width: 439px;
+	color:#fff;
+	padding:50px 35px;
+	font-size:1.5em;
+}
+
+.node-type-regional-director .field-name-field-summary,
+.node-type-regional-director .field-name-field-experience,
+.node-type-regional-director .field-name-field-education {
+	float:left;
+	margin:10px 0;
+}
+
+.node-type-regional-director .field-name-field-summary .field-label, 
+.node-type-regional-director .field-name-field-experience .field-label, 
+.node-type-regional-director .field-name-field-education .field-label {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	text-transform: uppercase;
+}
+
+/* ------------------ Company News Landing -------------------- */
+
+.view-company-news .view-header {
+	background: url(../img/regional-director-testimonial-bg.jpg) repeat;
+	height: 200px;
+	padding:30px;
+	margin: 35px 0;
+}
+
+.view-company-news .view-header p {
+	color:#fff;
+	font-size: 1.7em;
+	margin:0;
+}
+
+.view-company-news .views-row {
+	margin: 0 0 40px 0;
+	border-bottom: 1px solid #ddd;
+	padding: 0 0 40px 0;
+	float:left;
+	width:100%;
+}
+
+.view-company-news .views-row .views-field-title {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	color:#d62632;
+	font-size: 1.2em;
+}
+
+.view-company-news .views-row .views-label {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	text-transform: uppercase;
+	float:left;
+	margin:0 3px 0 0;
+}
+
+.view-company-news .views-row .views-field {
+	margin:5px 0;
+}
+
+.view-company-news .views-row .views-field-field-source-link a {
+	color:#d62632;
+	text-decoration: underline;
+}
+
+.view-company-news .views-row .views-more-link {
+	color: #d62632;
+	text-decoration: underline;
+	background: url(../img/link-arrow-icon-red.png) no-repeat 65px 6px;
+	width: 70px;
+	display: block;
+	text-align: left;
+}
+
+/* ------------------ Store Locator --------------------------- */
+
+.page-storelocator #cs-store-locator-form {
+	margin:50px 0 0;
+	float:left;
+	width:960px;
+}
+
+.page-storelocator #cs-store-locator-form .form-type-textfield {
+	float:left;
+}
+
+.page-storelocator #cs-store-locator-form .form-type-textfield input.form-text {
+	border: 1px solid #bbb;
+	padding: 3px;
+	margin:0 15px 0 0;
+}
+
+.page-storelocator #submitBtnDiv {
+	width: 50px;
+	float: left;
+	margin: 27px 0 0;
+}
+
+.page-storelocator #edit-submit {
+	height: 28px;
+	padding: 0px 15px;
+	background: #666;
+	color: #fff;
+}
+
+.page-storelocator #cs-store-locator-form #edit-state {
+	width:60px;
+}
+
+.page-storelocator #edit-street {
+	width:240px;
+}
+
+.page-storelocator #cs-store-list {
+	float:left;
+	width: 240px;
+	border: 1px solid #ddd;
+	padding:20px 10px;
+}
+
+.page-storelocator #cs-store-list .cs-store-address {
+	font-size:.8em;
+	margin:5px 0 20px;
+}
+
+.page-storelocator #cs-store-list .cs-store-address img {
+	margin:0 10px 0 0;
+}
+
+.page-storelocator #googmap {
+	margin:0 0 0 15px;
+}
+
+/* ------------------ Market Page ----------------------------- */
+
+.node-type-market-pages #block-system-main {
+	float: left;
+	margin: 35px 0 0;	
+}
+
+.node-type-market-pages #block-system-main .group-left {
+	float: left;
+	width: 582px;
+	border-right: 1px solid #ddd;
+	padding: 0 30px 0 0;
+	margin: 0 30px 0 0;
+}
+
+.node-type-market-pages #block-system-main .group-left h3 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color: #b00000;
+	margin:1.5em 0 0 0;
+}
+
+.node-type-market-pages #block-system-main .group-left h5 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	margin: 1.67em 0 0.5em 0;
+	font-size:1.0em;
+}
+
+.node-type-market-pages #block-system-main .group-left ul {
+	list-style: disc;
+	margin:0 0 0 1.2em;
+}
+
+.node-type-market-pages #block-system-main .group-right {
+	float:right;
+	width:310px;
+}
+
+#block-cs-nearest-store,
+.field-name-nearest-store-block {
+	width:330px;
+	float: left;
+	border: 10px solid #ddd;
+	padding: 10px;
+	font-size: 0.7em;
+	margin:2em 0;
+}
+
+#block-cs-nearest-store h2 {
+	color: #b00000;
+	font-size:1.5em;
+	margin:0 0 0.75em 0;
+}
+
+#block-cs-nearest-store img,
+.field-name-nearest-store-block img {
+	float: left;
+	width: 170px;
+	height: 135px;
+	margin: 0 10px 0 0;
+}
+
+#block-cs-nearest-store a,
+.field-name-nearest-store-block a {
+	color: #b00000;
+	text-decoration: underline;
+	margin: 1.3em 0 0;
+	display: inline-block;
+	float: left;
+	width: 90px;
+}
+
+.node-type-market-pages .field-name-field-why-cellular-sales- {
+	background: #000;
+	color:#fff;
+	padding: 20px;
+}
+
+.node-type-market-pages .field-name-field-why-cellular-sales- h2 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:1.1em;
+	margin:0 0 0.83em 0;
+	color:#d62632;
+}
+
+.node-type-market-pages .field-name-field-why-cellular-sales- h4 {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	margin:1.33em 0 .50em 0;
+}
+
+.node-type-market-pages .field-name-field-why-cellular-sales- p {
+	margin: 0 0 .50em 0;
+}
+
+.node-type-market-pages .field-name-field-partnership-opportunities h2 {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	color:#d62632;
+	font-size:1.1em;
+	margin:1.33em 0 .5em 0;
+}
+
+.node-type-market-pages .field-name-field-partnership-opportunities a {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color:#d62632;
+}
+
+#block-cs-market-locations {
+	clear:both;
+	margin:0 0 1em 0;
+}
+
+#block-cs-market-locations h2 {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	color: #b00000;
+	margin: 1.5em 0 0.5em 0;	
+}
+
+
+#block-cs-market-locations .cs-store {
+	float:left;
+	width:190px;
+	min-height:110px;
+	padding:0 1em 0 0;
+	font-size:0.8em;
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+}
+
+#block-cs-market-locations .cs-store .cs-store-name {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	text-transform: uppercase;
+}
+
+/* -------------- Tips and Tricks Styles ---------------------- */
+
+.page-tips-and-tricks .view-header {
+  width: 80%;
+  float: right;
+  background: #f7f7f7;
+  margin: 12px 0 0;
+}
+
+.page-tips-and-tricks .view-header a {
+  color: #b00000;
+  font-size: 1.3em;
+}
+
+.page-tips-and-tricks .view-filters {
+	float:left;
+	width:20%;
+	margin:15px 0 0;
+}
+
+.page-tips-and-tricks .view-filters label {
+	font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+	font-size:1.1em;
+}
+
+.page-tips-and-tricks .view-filters .form-type-checkbox {
+	margin:0.10em 0;
+}
+
+.page-tips-and-tricks .view-filters .form-checkboxes label {
+	font-family: 'MyriadPro', Helvetica, sans-serif;
+	font-size:0.9em;
+}
+
+.page-tips-and-tricks .view-filters .views-exposed-widget {
+	width: 190px;
+	padding: .5em 1em .5em 0;
+	border-bottom: 1px solid #ddd;
+}
+
+.page-tips-and-tricks .view-filters .views-submit-button {
+	border-bottom: none;
+}
+
+.page-tips-and-tricks .view-filters .form-submit {
+	margin:0;
+	background: #b00000;
+	border: 1px solid #b00000;
+}
+
+.page-tips-and-tricks .view-filters .views-exposed-widget.views-submit-button {
+  border: none;
+}
+
+.page-tips-and-tricks .view-header .view-content {
+  float: left;
+  width: 100%;
+}
+
+.page-tips-and-tricks .view-content {
+  width: 80%;
+  float: right;
+  background-color: #f7f7f7;
+  padding: 30px;
+}
+
+.page-tips-and-tricks .view-content .views-row {
+  margin: 25px 0 0;
+  padding: 0 0 15px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.page-tips-and-tricks .view-content .views-row a {
+  color: #b00000;
+}
+
+.page-tips-and-tricks .view-filters .form-control {
+  border: none !important;
+  box-shadow: none;
+}
+
+/* ----------------- Footer Styles ---------------------------- */
+
+.footer {
+	width:100% !important;
+	margin:0;
+	padding:0;
+	border:none;
+}
+
+
+.footer .region-footer {
+	width:996px;
+	border:none;
+	margin:0 auto;
+	padding:0 0 36px 0;
+}
+
+.not-front .footer  {
+	background:url(../img/footer-bg-not-front.png) repeat-x 0 0;
+	padding:115px 0 36px 0;
+}
+
+#block-block-8,
+.view-customer-testimonial {
+	margin-top: 24px;
+	margin-bottom: 67px;
+	background: url(../img/feature-bg.png) no-repeat 0 0;
+	width: 989px;
+	height: 225px;
+	padding: 27px 28px 0;
+	color: #fff;
+}
+
+.page-testimonials .not-front .col-sm-9 {
+  padding: 0 30px 50px;
+  margin: 16px 0 0;
+}
+
+.page-testimonials .pagination {
+  margin:0 0 10px 0;
+}
+
+.page-testimonials .view-customer-testimonial {
+  width: auto;
+  background: none;
+  color: #333;
+  padding: 25px 19px;
+  margin: 0;
+}
+
+.page-testimonials .view-customer-testimonial .views-row {
+  float:left;
+  width:100%;
+}
+
+.page-testimonials .view-customer-testimonial .views-field-view-node {
+  float:right;
+}
+
+.page-testimonials .view-customer-testimonial .views-field-view-node a {
+  font-family: 'MyriadPro-Bold', Helvetica, sans-serif;
+  color:#333;
+}
+
+.page-testimonials .view-customer-testimonial .views-more-link {
+  color:#b90000;
+}
+
+.page-testimonials .view-customer-testimonial .views-field-created {
+  width:100%;
+  float:right;
+}
+
+.view-customer-testimonial .views-field-body {
+	margin: 0 0 5px 0;
+}
+
+.view-customer-testimonial .views-field-title {
+	float: left;
+	margin: 0 5px 0 0;
+}
+
+#block-block-8 h3,
+.view-customer-testimonial h3 {
+	margin: 0;
+	font-size: 37px;
+	line-height: 1;
+	text-transform: uppercase;
+	font-family: MyriadPro, Helvetica, Arial, sans-serif;
+}
+
+#block-block-8 h5,
+.view-customer-testimonial h5 {
+	font-size:22px;
+	font-family: MyriadPro, Helvetica, Arial, sans-serif;
+	margin:20px 0 5px 0;
+}
+
+#block-block-8 h6,
+.view-customer-testimonial h6 {
+	font-size: 12px;
+	margin: 5px 0;
+}
+
+#block-block-8 a,
+.view-customer-testimonial a {
+	color:#fff;
+	text-decoration:underline;
+	font-family: MyriadPro, Helvetica, Arial, sans-serif;
+	font-size:12px;
+}
+
+#block-block-8 p,
+.view-customer-testimonial p {
+	margin:5px 0;
+}
+
+#block-menu-block-4 {
+	float:right;
+	margin: 7px 140px 0 0;
+}
+
+#block-menu-block-4 .menu li {
+	padding-right: 5px;
+	font-size: 11px;
+	line-height: 11px;
+	text-transform: uppercase;
+	font-weight: bold;
+	display: inline-block;
+	float:left;
+}
+
+#block-menu-block-4 .menu li.last a {
+	border:none;
+}
+
+#block-menu-block-4 .menu li a {
+	color:#ab1321;
+	text-decoration:underline;
+	padding:0 5px 0 0;
+	border-right:1px solid #000;
+}
+
+#block-block-9 {
+	width: 100%;
+	clear: both;
+	text-align: center;
+	font-size:10px;
+}
+
+#block-block-6--2 {
+	float:left;
+	margin:0 0 0 140px;
+}
+
+#block-block-6--2 ul li {
+	float:left;
+	list-style-type:none;
+}
+
+/*
+ * Clearfix: contain floats
+ *
+ * For modern browsers
+ * 1. The space content is one way to avoid an Opera bug when the
+ *    `contenteditable` attribute is included anywhere else in the document.
+ *    Otherwise it causes space to appear at the top and bottom of elements
+ *    that receive the `clearfix` class.
+ * 2. The use of `table` rather than `block` is only necessary if using
+ *    `:before` to contain the top-margins of child elements.
+ */
+
+.clearfix:before,
+.clearfix:after {
+    content: " "; /* 1 */
+    display: table; /* 2 */
+}
+
+.clearfix:after {
+    clear: both;
+}
+
+/*
+ * For IE 6/7 only
+ * Include this rule to trigger hasLayout and contain floats.
+ */
+
+.clearfix {
+    *zoom: 1;
+}
+
+/* ==========================================================================
+   EXAMPLE Media Queries for Responsive Design.
+   Theses examples override the primary ('mobile first') styles.
+   Modify as content requires.
+   ========================================================================== */
+
+@media only screen and (min-width: 1024px) {
+  #page-inner {
+    width: 1059px;
+  }
+
+  #search-box {
+    left: 590px;
+  }
+
+  #verizon-blocks .verizon {
+    width: 298px;
+  }
+
+  .lt-ie8 #verizon-blocks .verizon {
+    width: 283px;
+  }
+
+  #primary,
+  #secondary {
+    left: 298px;
+  }
+
+  #header .social-links {
+    left: 587px;
+  }
+
+  #footer .social-links {
+    left: 137px;
+  }
+
+  #main,
+  .features .commonFeature,
+  #footer {
+    margin-left: 70px;
+  }
+}
+
+@media only screen and (-webkit-min-device-pixel-ratio: 1.5),
+       only screen and (min-resolution: 144dpi) {
+    /* Style adjustments for high resolution devices */
+}
+
+/* ==========================================================================
+   Print styles.
+   Inlined to avoid required HTTP connection: h5bp.com/r
+   ========================================================================== */
+
+@media print {
+    * {
+        background: transparent !important;
+        color: #000 !important; /* Black prints faster: h5bp.com/s */
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+
+    a,
+    a:visited {
+        text-decoration: underline;
+    }
+
+    a[href]:after {
+        content: " (" attr(href) ")";
+    }
+
+    abbr[title]:after {
+        content: " (" attr(title) ")";
+    }
+
+    /*
+     * Don't show links for images, or javascript/internal links
+     */
+
+    .ir a:after,
+    a[href^="javascript:"]:after,
+    a[href^="#"]:after {
+        content: "";
+    }
+
+    pre,
+    blockquote {
+        border: 1px solid #999;
+        page-break-inside: avoid;
+    }
+
+    thead {
+        display: table-header-group; /* h5bp.com/t */
+    }
+
+    tr,
+    img {
+        page-break-inside: avoid;
+    }
+
+    img {
+        max-width: 100% !important;
+    }
+
+    @page {
+        margin: 0.5cm;
+    }
+
+    p,
+    h2,
+    h3 {
+        orphans: 3;
+        widows: 3;
+    }
+
+    h2,
+    h3 {
+        page-break-after: avoid;
+    }
+}

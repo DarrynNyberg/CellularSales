@@ -1,0 +1,465 @@
+$content['type']  = array (
+  'name' => 'Dealer Profile',
+  'type' => 'dealer_profile',
+  'description' => 'A dealer\'s profile information container',
+  'title_label' => 'Full Name',
+  'body_label' => 'About Me',
+  'min_word_count' => '0',
+  'help' => '',
+  'node_options' => 
+  array (
+    'status' => true,
+    'promote' => false,
+    'sticky' => false,
+    'revision' => false,
+  ),
+  'upload' => '1',
+  'old_type' => 'dealer_profile',
+  'orig_type' => '',
+  'module' => 'node',
+  'custom' => '1',
+  'modified' => '1',
+  'locked' => '0',
+  'content_profile_use' => 1,
+  'comment' => '2',
+  'comment_default_mode' => '3',
+  'comment_default_order' => '1',
+  'comment_default_per_page' => '10',
+  'comment_controls' => '0',
+  'comment_anonymous' => 0,
+  'comment_subject_field' => '0',
+  'comment_preview' => '0',
+  'comment_form_location' => '1',
+  'fivestar' => 0,
+  'fivestar_stars' => 5,
+  'fivestar_labels_enable' => 1,
+  'fivestar_label_0' => 'Cancel rating',
+  'fivestar_label_1' => 'Poor',
+  'fivestar_label_2' => 'Okay',
+  'fivestar_label_3' => 'Good',
+  'fivestar_label_4' => 'Great',
+  'fivestar_label_5' => 'Awesome',
+  'fivestar_label_6' => 'Give it @star/@count',
+  'fivestar_label_7' => 'Give it @star/@count',
+  'fivestar_label_8' => 'Give it @star/@count',
+  'fivestar_label_9' => 'Give it @star/@count',
+  'fivestar_label_10' => 'Give it @star/@count',
+  'fivestar_style' => 'average',
+  'fivestar_text' => 'dual',
+  'fivestar_title' => 1,
+  'fivestar_feedback' => 1,
+  'fivestar_unvote' => 0,
+  'fivestar_position_teaser' => 'hidden',
+  'fivestar_position' => 'below',
+  'fivestar_comment' => 0,
+);
+$content['fields']  = array (
+  0 => 
+  array (
+    'label' => 'Current cell phone',
+    'field_name' => 'field_cellproduct',
+    'type' => 'nodereference',
+    'widget_type' => 'nodereference_autocomplete',
+    'change' => 'Change basic information',
+    'weight' => '31',
+    'autocomplete_match' => 'contains',
+    'size' => '75',
+    'description' => 'Begin typing in your current cell phone model/name.',
+    'default_value' => 
+    array (
+    ),
+    'default_value_php' => '$nodeid = db_fetch_object(db_query("SELECT n.nid FROM {node} n INNER JOIN {content_type_product} p ON p.nid=n.nid WHERE n.status=1 LIMIT 1"));return array( 0 => array(\'nid\' => $nodeid->nid) );',
+    'default_value_widget' => NULL,
+    'group' => false,
+    'required' => 1,
+    'multiple' => '0',
+    'referenceable_types' => 
+    array (
+      'product' => 'product',
+      'banner_home' => 0,
+      'blog' => 0,
+      'dealer_profile' => 0,
+      'phone_details' => 0,
+      'faq' => 0,
+      'forum' => 0,
+      'page' => 0,
+      'panel' => 0,
+      'plans' => 0,
+      'profile' => 0,
+      'reviews' => 0,
+      'store' => 0,
+      'story' => 0,
+      'webform' => 0,
+      'pop_up' => 0,
+    ),
+    'advanced_view' => '--',
+    'advanced_view_args' => '',
+    'op' => 'Save field settings',
+    'module' => 'nodereference',
+    'widget_module' => 'nodereference',
+    'columns' => 
+    array (
+      'nid' => 
+      array (
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => false,
+        'index' => true,
+      ),
+    ),
+    'display_settings' => 
+    array (
+      'weight' => '31',
+      'parent' => '',
+      'label' => 
+      array (
+        'format' => 'above',
+      ),
+      'teaser' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      'full' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      4 => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      2 => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      3 => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      'cck_blocks' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      'token' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+    ),
+  ),
+  1 => 
+  array (
+    'label' => 'Current store location',
+    'field_name' => 'field_storelocation',
+    'type' => 'nodereference',
+    'widget_type' => 'nodereference_autocomplete',
+    'change' => 'Change basic information',
+    'weight' => '32',
+    'autocomplete_match' => 'contains',
+    'size' => '75',
+    'description' => 'Begin typing in the name of your current store location.',
+    'default_value' => 
+    array (
+    ),
+    'default_value_php' => '$nodeid = db_fetch_object(db_query("SELECT nid FROM {node} WHERE type = \'store\' AND status=1 limit 1"));
+return array( 0 => array( \'nid\' => $nodeid->nid ) );',
+    'default_value_widget' => NULL,
+    'group' => false,
+    'required' => 1,
+    'multiple' => '0',
+    'referenceable_types' => 
+    array (
+      'store' => 'store',
+      'banner_home' => 0,
+      'blog' => 0,
+      'dealer_profile' => 0,
+      'phone_details' => 0,
+      'faq' => 0,
+      'forum' => 0,
+      'page' => 0,
+      'panel' => 0,
+      'plans' => 0,
+      'product' => 0,
+      'profile' => 0,
+      'reviews' => 0,
+      'story' => 0,
+      'webform' => 0,
+      'pop_up' => 0,
+    ),
+    'advanced_view' => '--',
+    'advanced_view_args' => '',
+    'op' => 'Save field settings',
+    'module' => 'nodereference',
+    'widget_module' => 'nodereference',
+    'columns' => 
+    array (
+      'nid' => 
+      array (
+        'type' => 'int',
+        'unsigned' => true,
+        'not null' => false,
+        'index' => true,
+      ),
+    ),
+    'display_settings' => 
+    array (
+      'weight' => '32',
+      'parent' => '',
+      'label' => 
+      array (
+        'format' => 'above',
+      ),
+      'teaser' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      'full' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      4 => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      2 => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      3 => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      'cck_blocks' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      'token' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+    ),
+  ),
+  2 => 
+  array (
+    'label' => 'Has Portal',
+    'field_name' => 'field_portal',
+    'type' => 'number_integer',
+    'widget_type' => 'optionwidgets_onoff',
+    'change' => 'Change basic information',
+    'weight' => '33',
+    'description' => 'Will this dealer be able to write blog entries and create custom product prices for companies.',
+    'default_value' => 
+    array (
+      0 => 
+      array (
+        'value' => 0,
+      ),
+    ),
+    'default_value_php' => '',
+    'default_value_widget' => 
+    array (
+      'field_portal' => 
+      array (
+        'value' => 0,
+      ),
+    ),
+    'group' => false,
+    'required' => 0,
+    'multiple' => '0',
+    'min' => '',
+    'max' => '',
+    'prefix' => '',
+    'suffix' => '',
+    'allowed_values' => '0
+1|Has Portal',
+    'allowed_values_php' => '',
+    'op' => 'Save field settings',
+    'module' => 'number',
+    'widget_module' => 'optionwidgets',
+    'columns' => 
+    array (
+      'value' => 
+      array (
+        'type' => 'int',
+        'not null' => false,
+        'sortable' => true,
+      ),
+    ),
+    'display_settings' => 
+    array (
+      'weight' => '33',
+      'parent' => '',
+      'label' => 
+      array (
+        'format' => 'above',
+      ),
+      'teaser' => 
+      array (
+        'format' => 'default',
+        'exclude' => 1,
+      ),
+      'full' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      4 => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      2 => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      3 => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      'cck_blocks' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+      'token' => 
+      array (
+        'format' => 'default',
+        'exclude' => 0,
+      ),
+    ),
+  ),
+  3 => 
+  array (
+    'label' => 'Photo',
+    'field_name' => 'field_dealerphoto',
+    'type' => 'filefield',
+    'widget_type' => 'imagefield_widget',
+    'change' => 'Change basic information',
+    'weight' => '34',
+    'file_extensions' => 'png gif jpg jpeg',
+    'progress_indicator' => 'bar',
+    'file_path' => 'dealerphotos',
+    'max_filesize_per_file' => '1M',
+    'max_filesize_per_node' => '',
+    'max_resolution' => '200x220',
+    'min_resolution' => '200x220',
+    'custom_alt' => 0,
+    'alt' => '',
+    'custom_title' => 0,
+    'title_type' => 'textfield',
+    'title' => '',
+    'use_default_image' => 1,
+    'default_image_upload' => '',
+    'default_image' => 
+    array (
+      'filename' => 'dealer_default.jpg',
+      'filepath' => 'sites/default/files/imagefield_default_images/dealer_default.jpg',
+      'filemime' => 'image/jpeg',
+      'source' => 'default_image_upload',
+      'destination' => 'sites/default/files/imagefield_default_images/dealer_default.jpg',
+      'filesize' => 9130,
+      'uid' => '1',
+      'status' => 1,
+      'timestamp' => 1269601843,
+      'fid' => '31',
+    ),
+    'description' => '',
+    'group' => false,
+    'required' => 0,
+    'multiple' => '0',
+    'list_field' => '0',
+    'list_default' => 1,
+    'description_field' => '0',
+    'op' => 'Save field settings',
+    'module' => 'filefield',
+    'widget_module' => 'imagefield',
+    'columns' => 
+    array (
+      'fid' => 
+      array (
+        'type' => 'int',
+        'not null' => false,
+        'views' => true,
+      ),
+      'list' => 
+      array (
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => false,
+        'views' => true,
+      ),
+      'data' => 
+      array (
+        'type' => 'text',
+        'serialize' => true,
+        'views' => true,
+      ),
+    ),
+    'display_settings' => 
+    array (
+      'label' => 
+      array (
+        'format' => 'above',
+        'exclude' => 0,
+      ),
+      'teaser' => 
+      array (
+        'format' => 'image_plain',
+        'exclude' => 0,
+      ),
+      'full' => 
+      array (
+        'format' => 'image_plain',
+        'exclude' => 0,
+      ),
+      4 => 
+      array (
+        'format' => 'image_plain',
+        'exclude' => 0,
+      ),
+      2 => 
+      array (
+        'format' => 'image_plain',
+        'exclude' => 0,
+      ),
+      3 => 
+      array (
+        'format' => 'image_plain',
+        'exclude' => 0,
+      ),
+      'cck_blocks' => 
+      array (
+        'format' => 'image_plain',
+        'exclude' => 0,
+      ),
+      'token' => 
+      array (
+        'format' => 'image_plain',
+        'exclude' => 0,
+      ),
+    ),
+  ),
+);
+$content['extra']  = array (
+  'title' => '-5',
+  'body_field' => '0',
+  'revision_information' => '20',
+  'comment_settings' => '30',
+  'menu' => '-2',
+  'path' => '30',
+  'attachments' => '30',
+);

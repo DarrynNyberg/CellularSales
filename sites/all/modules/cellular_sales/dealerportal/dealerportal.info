@@ -1,0 +1,12 @@
+; $Id$
+name = Dealer Portal
+description = Creates dealer users and their associated profile and portal pages. **MAKE SURE** to install the dependent modules FIRST, then install this module.
+core = 6.x
+package = Other
+version = 6.x-1.0
+dependencies[] = content_profile
+dependencies[] = content
+dependencies[] = comment
+dependencies[] = blog
+dependencies[] = content_copy
+dependencies[] = storeloc

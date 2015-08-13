@@ -1,0 +1,13 @@
+
+name = Cellular Sales
+description = Cellular Sales custom web features.
+core = 7.x
+package = Location
+version = 7.x-1.01
+
+dependencies[] = browscap
+dependencies[] = location
+dependencies[] = location_node
+dependencies[] = location_phone
+dependencies[] = location_fax
+dependencies[] = uc_product

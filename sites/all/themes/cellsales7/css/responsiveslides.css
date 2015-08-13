@@ -1,0 +1,95 @@
+/*! http://responsiveslides.com v1.54 by @viljamis */
+
+.rslides {
+  position: relative;
+  list-style: none;
+  overflow: hidden;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  }
+
+.rslides li {
+  -webkit-backface-visibility: hidden;
+  position: absolute;
+  display: none;
+  width: 100%;
+  left: 0;
+  top: 0;
+  }
+
+.rslides li:first-child {
+  position: relative;
+  display: block;
+  float: left;
+  }
+  .rslides li a{
+	  display:block;
+	  width:100%;
+	  height:auto;
+  }
+
+.rslides > li > a > img {
+  display: block;
+  height: auto;
+  float: left;
+  width: 100%;
+  border: 0;
+}
+
+.rslides_tabs{
+    bottom: 0;
+    position: absolute;
+    width: 100%;
+    z-index: 2;
+}
+
+.rslides_tabs li{
+	display:inline-block;
+}
+.field-item.even{
+	position:relative;
+}
+.field-item.even:hover .rslides_nav.rslides1_nav.prev,
+.field-item.even:hover .rslides_nav.rslides1_nav.next{
+	display:block;
+}
+.rslides_nav.rslides1_nav.prev{
+	position:absolute;
+	content:'';
+	top:50%;
+	left:1%;
+	width:48px;
+	height:56px;
+	text-indent:-9999px;
+	outline:none;
+	z-index:99;
+	display:none;
+	background:url(../img/previous.png) no-repeat 0 0;
+}
+.rslides_nav.rslides1_nav.next{
+	position:absolute;
+	content:'';
+	top:50%;
+	right:1%;
+	width:48px;
+	height:56px;
+	text-indent:-9999px;
+	outline:none;
+	z-index:99;
+	display:none;
+	background:url(../img/next.png) no-repeat 0 0;
+}
+@media only screen and (max-width: 767px){
+	.rslides li{
+		height:auto !important;
+	}
+}
+@media only screen and (max-width: 320px){
+	.rslides_nav.rslides1_nav.prev,
+	.rslides_nav.rslides1_nav.next{
+		top:31%;
+	}
+	
+	
+}

@@ -1129,7 +1129,7 @@ function cs_init_location_markers(&$lat = null, &$lon = null, $addr = '') {
   return $markers;
 }
 
-// Nytech
+
 
 /**
  * Main store locator page.
@@ -1140,7 +1140,7 @@ function cs_store_locator_page($lat = NULL, $lon = NULL, $addr = NULL, $err = NU
   $isGeoAdmin = user_access('edit any store content');
   $nearby_stores = cs_nearest_stores_query($lat, $lon, 15);
 
-  $page = '<div class="col-sm-3">' . "<div id='cs-store-list'>\n";
+  $page = "<div id='cs-store-list'>\n";
   if ($err) $page .= "<div id='geocode_err'>There were {$err} results for the address<br />entered. Please refine your address.</div>";
   $icon_html = htmlspecialchars($markers[0]['icon']);
   $page .= "<div class='cs-store-address'><img class='cs-store-address-marker' id='storeloc_mark0' src='{$icon_html}' alt='Your location' />";
@@ -1154,7 +1154,6 @@ function cs_store_locator_page($lat = NULL, $lon = NULL, $addr = NULL, $err = NU
   
   foreach ($nearby_stores as $store) {
     $cnt++;
-    //print_r($store);
     $dist = round($store->distance * METER_2_MI, 1);
     // The rest of the cookie values were set in the form submission, but we did not have the nearest store yet.
     if ($cnt == 1) {
@@ -1177,23 +1176,14 @@ function cs_store_locator_page($lat = NULL, $lon = NULL, $addr = NULL, $err = NU
     } else { 
       $icon = null; 
     }
-	
-	
-    $addrHtml =  '<b>' . $store->name . '<b><span style="display:none;visibility:hidden">NID-' . $store->nid . '</span>';
+    $addrHtml =  "<b>" . $store->name . "</b>";
     $addrHtml .= "<br />" . $store->street . "<br />";
     if (!empty($store->additional)) $addrHtml .= "<span class='cs-address-additional'>(" . $store->additional . ")</span><br />";
     $addrHtml .= ucwords(strtolower($store->city)) . ", " . $store->province . " " . $store->postal_code . "<br />";
     if (!empty($store->phone)) $addrHtml .= $store->phone . "<br />";
     if (!empty($store->hours)) $addrHtml .= $store->hours . "<br />";
     $addrHtml .= "Approximately <b>{$dist}</b> miles.";
-    if($repair_center)  {
-    	$store_link = 'Smartphone repair center'; 
-		$store_node = node_load($store->nid);
-		if(!empty($store_node->field_store_page_url)) {
-			$store_link = '<a style="color: red; font-weight: bold;" href="' . $store_node->field_store_page_url['und'][0]['value'] . '">Smartphone repair center</a>';
-		}
-    	$addrHtml .= '<br /><span class="cs-repair-center">' . $store_link . '</span>';
-	}
+    if ($repair_center) $addrHtml .= "<br /><span class='cs-repair-center' style='color: red; font-weight: bold;'>Smartphone repair center</span>";
     if ($cnt < 6) {
       $page .= $addrHtml . '</div>';
       // Insert into the display the available dealers.
@@ -1216,7 +1206,7 @@ function cs_store_locator_page($lat = NULL, $lon = NULL, $addr = NULL, $err = NU
       'distance' => $dist,
     );
   }
-  $page .= "</div></div>";
+  $page .= "</div>";
 
   
   if ($cnt == 0) {
@@ -1256,7 +1246,7 @@ function cs_maps_api_key($script_tag = false, $sensor = false) {
  * $max_distance is the furthest distance allowed at the default zoom level. The map is zoomed out if none of the points are <= $max_distance from the center.
  */
 function cs_add_map($markers, $max_distance = 0, $zoom = 12) {
-  $map = '<div class="col-sm-9">' . "<div id='googmap'>JavaScript is required to view the map.</div></div>";
+  $map = "<div style='width:540px;height:410px;position:relative;float:left;background-color:rgb(229,227,223);margin-bottom:20px;' id='googmap'>JavaScript is required to view the map.</div>";
   $map .= cs_maps_api_key(true);
   
   drupal_add_js(array(
@@ -1344,7 +1334,7 @@ function cs_store_page($storeQuery) {
   }
   $storeCode = $store->storecode;
   $foundStores = cs_nearest_stores_query($store->latitude, $store->longitude, 15);
-  $page =  '<div class="col-sm-3">' . "<div id='cs-store-list'>";
+  $page = "<div id='cs-store-list'>";
   $storeCnt = 1;
   $cnt = 0;
   $isGeoAdmin = user_access('edit any store content');
@@ -1402,7 +1392,7 @@ function cs_store_page($storeQuery) {
       'distance' => $distance,
     );
   }
-  $page .= "</div></div>";
+  $page .= "</div>";
   $page .= cs_add_map($markers, -1);
   
   $desc = '<p>';
@@ -1502,13 +1492,13 @@ function cs_locations_page() {
 
 /**
  * Plans calculator page and form.
- */
+ */ 
 function cs_plan_calculator_page() {
   $ra[] = drupal_get_form('cs_plan_calculator_form');
   return $ra;
 }
 
-
+/* //Removed per Tim request on 8.13.15
 function cs_plan_calculator_form($form, &$form_state) {
   $items = array('Smartphone', 'Basic phone', 'Tablet', 'Connected device', 'Internet device');
   $line_price = array(40, 30, 10, 5, 20);
@@ -1586,7 +1576,7 @@ function cs_plan_calculator_form($form, &$form_state) {
   );
   return $form;
 }
-
+/*
 
 /**
  * Mapping of market codes to names. Maybe make this a node type later to allow updating.
@@ -1738,7 +1728,9 @@ function cs_menu() {
       'type' => MENU_NORMAL_ITEM,
     );
     $items['verizon-plans'] = array(
-      'title' => 'Plan calculator',
+      // Changed title from plan calculator on 8.13.15 per Tim Lucas
+	  //'title' => 'Plan calculator',
+	  'title' => 'The Verizon Plan',
       'page callback' => 'cs_plan_calculator_page',
       'access callback' => true,
       'type' => MENU_NORMAL_ITEM,

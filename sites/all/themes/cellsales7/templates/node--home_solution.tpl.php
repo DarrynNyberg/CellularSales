@@ -17,14 +17,11 @@ $image1 = $uc_product_image[0]['filename']  ;
 //$body3 = $field_additional_description_bod[0]['safe_value']  ; 
 //$specifications = $field_specifications[0]['safe_value']  ; 
 
-$free_product = ($display_price == 0.00 && $list_price>0 && $rebate>0 && $list_price-$rebate == 0)?TRUE:FALSE;
-
 //'module_name' = 'cs'
 //'block_delta' = 'store_locator' (larger version with form) or 'nearest_store' (smaller version, no form).
 //D7
 $block = module_invoke('cs', 'block_view', 'nearest_store');
 ?>
-<?php if($page) { ?>
 
 
 
@@ -89,28 +86,34 @@ h3 {
                 </div>
     
                 <div class="group-pricing field-group-div" id="node_home_solution_full_group_pricing">
-                    <?php if ($display_price != 0.00 || $free_product) {?>
                     <div class="product-info sell-price">
                         <span class="uc-price-label">Price:</span> <span class="uc-price">
-                        <?php if ($free_product) {
+                                                
+                          <?php if ($display_price == 0.00) {
                           print "FREE" ;
                         } else {
-                          $parts = explode('.', $display_price);    
-                          print '<span class="text-14">$</span>' . $parts[0] . '<span class="text-14">' . $parts[1] . '</span>';
+                          print '$' . $display_price;
                         } 
-                        ?>    
-                         </span><br />
+                        ?>
+                        
+                        </span><br />
                         <span class="pricing2">
                             
+                            $<?php print $list_price; ?> 2yr contract price. 
+                            
                             <?php  if ($rebate){
-                                print "$".$list_price ." 2-yr contract price -$" . $rebate . " mail-in rebate debit card.";
-                                }else{
-                                  print "2-year contract price";
-                                }
-                                ?>
+								print "<br>";
+								print "Less $" ;
+								print $rebate ;
+								print " rebate.";
+								
+								} 
+							?>
+                       		<br />
+                            Your price, $<?php print $display_price; ?>.
                         </span>
                     </div>
-                    <?php } ?>
+    
                     <div class="add-to-cart">
     					          <?php
                           $form_value =  drupal_get_form('uc_product_add_to_cart_form_'.$node->nid, $node);
@@ -167,56 +170,3 @@ h3 {
 </html>
 
 
-
-<?php } elseif(!$page && $teaser) { ?>
-    <?php
-        $body = $node->body['und'][0]['value'];
-        $body_strip = strip_tags($body);
-        //$body_200 = substr($body_strip, 0, 200);
-        $body_200 = substr($body_strip, 0, strpos($body_strip, ' ', 200))
-    
-    ?>
-    <div class="col-sm-6 product-catalog-display">
-        <div class="row">
-            <div class="col-sm-4">
-                <div class="product-cat-home-solution-img">
-                    <img src="/sites/default/files/product/image/home_solution/<?php print $image1 ;?>" />
-                </div>
-            </div>
-            <div class="col-sm-8">
-                <span class="product-title">
-                    <?php print $node->title; ?>
-                </span>
-                <p class="field-name-body"><?php print $body_200; ?></p>
-                
-                <br />
-                <?php  if ($display_price != 0.00 || $free_product) {?>
-                <div class="cat-pricing non-edge-price">                        
-                      <?php if ($free_product) {
-                          print "FREE" ;
-                        } else {
-                      $parts = explode('.', $display_price);
-                          print '<span class="text-14">$</span>' . $parts[0] . '<span class="text-14">' . $parts[1] . '</span>';
-                        } 
-                      ?>
-                      <br />
-                      <span class="text-10">
-                              <?php
-                              if ($rebate) {
-                                print "$" . $list_price . " 2-yr contract<br>price -$" . $rebate . " mail-in<br>rebate debit card.";
-                              } else {
-                                print "2-year contract price";
-                              }
-                              ?>
-                      </span>                    
-                </div>
-                      <?php } ?>
-                <div class="clearfix"></div>
-                <br /><br />
-                <?php print l('', 'node/' . $node->nid, array('attributes' => array('class' => array('btn', 'btn-default')))); ?>
-        
-                    
-            </div>
-        </div>
-    </div>
-<?php } ?>

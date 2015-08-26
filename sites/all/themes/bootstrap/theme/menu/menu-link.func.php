@@ -28,9 +28,9 @@ function bootstrap_menu_link(array $variables) {
 
       // Set dropdown trigger element to # to prevent inadvertant page loading
       // when a submenu link is clicked.
-      //$element['#localized_options']['attributes']['data-target'] = '#';
+      $element['#localized_options']['attributes']['data-target'] = '#';
       $element['#localized_options']['attributes']['class'][] = 'dropdown-toggle';
-      //$element['#localized_options']['attributes']['data-toggle'] = 'dropdown';
+      $element['#localized_options']['attributes']['data-toggle'] = 'dropdown';
     }
   }
   // On primary navigation menu, class 'active' is not set on active menu item.

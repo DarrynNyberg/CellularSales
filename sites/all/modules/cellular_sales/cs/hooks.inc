@@ -1,7 +1,5 @@
 <?php
-define('SMARTPHONE_TERM_ID', 1);
-define('CONTRACT_PRICING','contract');
-define('EDGE_PRICING','edge');
+
 /**
  * @file
  * Hooks used to alter the operation of non-core modules.
@@ -46,15 +44,6 @@ function cs_theme() {
     'cs_rebate' => array(
       'variables' => array('rebate' => 0),
     ),
-    'cs_monthly_price' => array(
-      'variables' => array('monthly_price' => 0),
-    ),
-    'cs_due_today_price' => array(
-      'variables' => array('price' => 0),
-    ),
-    'cs_simple_number' => array(
-      'variables' => array('qty' => 0),
-    ),
   );
 }
 
@@ -66,40 +55,10 @@ function theme_cs_rebate($variables) {
   if (isset($variables['rebate']) &&  $variables['rebate'] > 0) {
     return '<span class="cs-rebate">-$' . number_format($variables['rebate'], 2) . '</span>';
   } else {
-    return 'N/A';
+    return '';
   }
 }
 
-/**
- * Theme for cs monthly price, similar to theme_uc_price.
- */
-function theme_cs_monthly_price($variables) {
-  if (isset($variables['monthly_price']) &&  $variables['monthly_price'] > 0) {
-    return '<span class="cs-monthly-price">$' . number_format($variables['monthly_price'], 2) . '</span>';
-  } else {
-    return 'N/A';
-  }
-}
-/**
- * Theme for cs due today price, similar to theme_uc_price.
- */
-function theme_cs_due_today_price($variables) {
-  $price = $variables['price'];
-  if (isset($variables['price']) &&  $variables['price'] > 0) {
-    $price = number_format($variables['price'], 2);    
-  } 
-  return '<span class="cs-due-today">$' . $price . '</span>';
-}
-/**
- * Theme for cs quantity, show quantity without multiplication symbol.
- */
-function theme_cs_simple_number($variables) {
-  if (isset($variables['qty']) &&  $variables['qty'] > 0) {
-    return '<span class="cs-qty">' . $variables['qty'] . '</span>';
-  } else {
-    return 'N/A';
-  }
-}
 
 /**
  * Return the product rebate for the node, if any.
@@ -112,47 +71,7 @@ function cs_product_rebate($node) {
   }
 }
 
-/**
- * Return the product unit price for the node, if any.
- * If there is edge pricing then Full Retail Price will be returned
- */
-function cs_product_unit_price($node) {  
-  if ($node) {
-    if($node->price_plan==EDGE_PRICING){
-      return cs_product_full_retail_price(cs_product_monthly_price($node));
-    }else{
-      $unit_price = isset($node->list_price) ? $node->list_price : $node->sell_price;
-      return round($unit_price, 2);
-    }
-  }  
-}
-/**
- * Return the product full retail price for the node, if any.
- */
-function cs_product_full_retail_price($monthly_price) {
-  return round($monthly_price * 24,2); //Full retail price
-}
-/**
- * Return the product monthly price for the node, if any.
- */
-function cs_product_monthly_price($node) {
-  if ($node->price_plan==EDGE_PRICING && !empty($node->field_edge_price['und'][0]['value'])) {
-    return $node->field_edge_price['und'][0]['value'];
-  }  else {
-    return 0;
-  }
-}
 
-/**
- * Return the product due today price for the node, if any.
- */
-function cs_product_due_today_price($node) {
-  $due_today = 0;
-  if($node->price_plan!=EDGE_PRICING){
-    $due_today = round(cs_product_unit_price($node)-cs_product_rebate($node),2);
-  }
-  return $due_today;
-}
 
 /**
  * Implements hook_entity_view_alter().
@@ -197,15 +116,9 @@ function cs_entity_view_alter(&$build, $entity_type) {
       break;
     
     case 'uc_order_product':
-      $node = $build['#entity'];
-      $node->price_plan = _get_product_price_plan($node);
-      $rebate = ($node->price_plan!=EDGE_PRICING) ? cs_product_rebate($node) : 0;
+      $rebate = isset($build['#entity']) ? cs_product_rebate($build['#entity']) : 0;
       $build['rebate'] = array('#theme' => 'cs_rebate', '#rebate' => $rebate, '#cell_attributes' => array('class' => array('rebate')));
-      $build['price']['#price'] = cs_product_unit_price($node);
-      // adding monthly price field
-      $build['monthly_price'] = array('#theme' => 'cs_monthly_price', '#monthly_price' => cs_product_monthly_price($node), '#cell_attributes' => array('class' => array('monthly-price')));
-      // changing total field to due today (multiplying due today with quantity)
-      $build['total']['#price'] = cs_product_due_today_price($node) * $build['qty']['#qty'];
+      $build['price']['#price'] += $rebate;
       break;
   }
 }
@@ -245,42 +158,34 @@ function cs_uc_checkout_pane_contact($op, $order, $main_form = NULL, &$form_stat
       $form['billing_first_name'] = array(
         '#type' => 'textfield',
         '#title' => t('First name'),
-        '#size' => 50,
+        '#size' => 40,
         '#maxlength' => 40,
         '#required' => true,
-//        '#default_value' => $order->billing_first_name,
-        '#attributes' => array('placeholder' =>array(t('Enter First Name'))),
-        '#prefix'=>'<div class="contact-info-form"><div class = "first-last-name-div">',
+        '#default_value' => $order->billing_first_name,
       );
       $form['billing_last_name'] = array(
         '#type' => 'textfield',
         '#title' => t('Last name'),
-        '#size' => 50,
+        '#size' => 40,
         '#maxlength' => 40,
         '#required' => true,
-//        '#default_value' => $order->billing_last_name,
-        '#attributes' => array('placeholder' =>array(t('Enter Last Name'))),
-        '#suffix' => '</div>'
+        '#default_value' => $order->billing_last_name,
       );
       $form['primary_email'] = array(
         '#type' => 'textfield',
         '#title' => t('E-mail'),
-        '#size' => 50,
+        '#size' => 60,
         '#maxlength' => 96, // Ubercart field length.
         '#required' => false,
-//        '#default_value' => $order->primary_email,
-        '#attributes' => array('placeholder' =>array(t('Enter Email Address'))),
-        '#prefix'=>'<div class = "email-phone-div">',
+        '#default_value' => $order->primary_email,
       );
       $form['billing_phone'] = array(
         '#type' => 'textfield',
         '#title' => t('Phone number'),
-        '#size' => 50,
+        '#size' => 20,
         '#maxlength' => 20,
-        '#required' => true,
-//        '#default_value' => $order->billing_phone,
-        '#attributes' => array('placeholder' =>array(t('Enter Phone Number'))),
-        '#suffix' => '</div></div>'
+        '#required' => false,
+        '#default_value' => $order->billing_phone,
       );
       $form['legal_csa'] = array(
         '#type' => 'checkbox',
@@ -288,10 +193,10 @@ function cs_uc_checkout_pane_contact($op, $order, $main_form = NULL, &$form_stat
         '#required' => false,
         '#description' => t('See Cellular Sales <a href="@legal-csa" target="_blank">Legal CSA</a> for complete terms and conditions.', 
           array('@legal-csa' => url('legal/csa'))),
-//        '#default_value' => isset($order->data['cs_legal_csa']) ? $order->data['cs_legal_csa'] : 0,
+        '#default_value' => isset($order->data['cs_legal_csa']) ? $order->data['cs_legal_csa'] : 0,
       );
-      $description = '';
-//      $description = t('Enter your contact information here. You must enter your e-mail or phone number.');
+      
+      $description = t('Enter your contact information here. You must enter your e-mail or phone number.');
       return array('description' => $description, 'contents' => $form);
 
     case 'process':
@@ -324,14 +229,12 @@ function cs_uc_checkout_pane_contact($op, $order, $main_form = NULL, &$form_stat
       return $ok;
 
     case 'review':
-      drupal_set_message(t('<strong>PLEASE REVIEW: </strong>Check your order and contact information before submitting your order'), 'info');
-      
-      $review[] = array('title' => t('Your Name'), 'data' => check_plain($order->billing_first_name . ' ' . $order->billing_last_name));
+      $review[] = array('title' => t('Name'), 'data' => check_plain($order->billing_first_name . ' ' . $order->billing_last_name));
       if (!empty($order->primary_email)) {
-        $review[] = array('title' => t('Email Address'), 'data' => check_plain($order->primary_email));
+        $review[] = array('title' => t('E-mail'), 'data' => check_plain($order->primary_email));
       }
       if (!empty($order->billing_phone)) {
-        $review[] = array('title' => t('Phone Number'), 'data' => check_plain($order->billing_phone));
+        $review[] = array('title' => t('Phone number'), 'data' => check_plain($order->billing_phone));
       }
       return $review;
   }
@@ -375,7 +278,7 @@ function cs_uc_checkout_pane_nearest_store($op, $order, $main_form = NULL, &$for
         '#title' => t('Zip code'),
         '#size' => 10,
         '#maxlength' => 12,
-        '#required' => true,
+        '#required' => false,
         '#default_value' => $zip,
         '#description' => t("Enter a new zip code and click on the list above if don't see a nearby store."),
         '#ajax' => array('callback' => 'cs_uc_checkout_pane_nearest_store_update', 'wrapper' => 'zip-stores'),
@@ -398,7 +301,7 @@ function cs_uc_checkout_pane_nearest_store($op, $order, $main_form = NULL, &$for
       }
 
     case 'review':
-        return array(array('title' => t('Nearest Store'), 'data' => check_plain($order->delivery_street1 . ': '. $order->delivery_street2)));      
+      return array('data' => check_plain($order->delivery_street1 . ': '. $order->delivery_street2));
   }
 }
 
@@ -470,37 +373,33 @@ function cs_preprocess_uc_order(&$variables) {
  * Implements hook_uc_cart_pane_alter() to add suggested links after the items but before the buttons.
  * If we did not have to add in between, it would be better to use hook_uc_cart_pane to create our own pane.
  */
-/**
- * below function is commented because we don't want accessories link on cart page any more
- */
 function cs_uc_cart_pane_alter(&$panes, $items) {
-//  dev_print_r($panes);
-//  if ($items && isset($panes['cart_form'])) {
-//    $links = '';
-//    $types = array();
-//    foreach ($items as $purchase) {
-//      $types[$purchase->type] = true;
-//    }
-//    if (isset($types['phone'])) {
-//      if (!isset($types['plan'])) {
-//        $links = l('Add a plan', 'plans');
-//      }
-//      if (!isset($types['accessory'])) {
-//        if ($links) {
-//          $links .= '&nbsp;|&nbsp;';
-//        }
-//        // $links .= l('Add accessories', 'phones', array('query' => array('accessory' => REQUEST_TIME)));
-//        $links = l('Add accessories', 'accessories');
-//      }
-//    }
-//    if ($links) {
-//      $panes['cart_form']['body']['cs_cart_links'] = array(
-//        '#markup' => $links,
-//        '#prefix' => '<div id="cs-cart-links">' ,
-//        '#suffix' => '</div>',
-//        '#weight' => 10);
-//    }
-//  }
+  if ($items && isset($panes['cart_form'])) {
+    $links = '';
+    $types = array();
+    foreach ($items as $purchase) {
+      $types[$purchase->type] = true;
+    }
+    if (isset($types['phone'])) {
+      if (!isset($types['plan'])) {
+        $links = l('Add a plan', 'plans');
+      }
+      if (!isset($types['accessory'])) {
+        if ($links) {
+          $links .= '&nbsp;|&nbsp;';
+        }
+        // $links .= l('Add accessories', 'phones', array('query' => array('accessory' => REQUEST_TIME)));
+        $links = l('Add accessories', 'accessories');
+      }
+    }
+    if ($links) {
+      $panes['cart_form']['body']['cs_cart_links'] = array(
+        '#markup' => $links,
+        '#prefix' => '<div id="cs-cart-links">' ,
+        '#suffix' => '</div>',
+        '#weight' => 10);
+    }
+  }
 }
 
 
@@ -623,245 +522,4 @@ function cs_views_query_alter(&$view, &$query) {
       }
       break;
   }
-}
-
-/**
- * Code by TM
- */
-
-function dev_print_r($str){
-    echo '<pre>';
-    print_r($str);
-    echo '</pre>';    
-}
-function dev_print_exit($str){
-    echo '<pre>';
-    print_r($str);
-    echo '</pre>';    
-    exit;
-}
-
-/**
- * Overriding the view cart form in order to add new fields in it 
- * @param type $form
- * @param type $form_state
- */
-function cs_form_uc_cart_view_form_alter(&$form, &$form_state) { 
-  $form['#attached']['css']=array(libraries_get_path('uniform') . "/theme/css/uniform.default.css");
-  $form['#attached']['js']=array(libraries_get_path('uniform') . "/jquery.uniform.js",
-                                  drupal_get_path('module', 'cs') . '/cart.js');
-  // changing title and weight of already added columns
-  $form['items']['#columns']['image']['cell'] = t('Item');
-  $form['items']['#columns']['remove']['cell'] = '';
-  $form['items']['#columns']['remove']['weight'] = 3;
-  $form['items']['#columns']['qty']['weight'] = 3;
-  // adding new columns
-  $form['items']['#columns']['unit_price'] = array(
-      'cell' => t('Unit Price'), 
-      'weight' => 4,
-  );
-  $form['items']['#columns']['monthly_price'] = array(
-      'cell' => t('Monthly Price'), 
-      'weight' => 5,
-  );
-  // changing column total to due today
-  $form['items']['#columns']['total'] = array(
-      'cell' => t('Due Today'), 
-      'weight' => 6,
-  );
-//  Adding classes and divs in order to style them
-  $form['actions']['continue_shopping']['#suffix']='<div class= "update-checkout-btn-div">';
-  $form['actions']['checkout']['checkout']['#suffix']='</div>';
-  $form['actions']['checkout']['checkout']['#attributes']=array('class'=>array('checkout-cart'));
-}
-
-/**
- * Overriding the tapir table in order to change the view of view cart page
- * @param type $table
- * @param type $table_id
- */
-function cs_tapir_table_alter(&$table, $table_id) {
-  if ($table_id == 'uc_cart_view_table') {
-    
-    $subtotal_due_today = 0;
-    foreach (element_children($table) as $key) {
-      
-      if (!empty($table['#parameters'][1][$key]['nid'])) {
-        
-        // Adding values to new added fields
-        $node = $table['#parameters'][1][$key]['#entity'];
-        $node->price_plan = _get_product_price_plan($node);
-        
-        $table[$key]['desc']['#cell_attributes'] = array('class' => array('products'));
-        
-        // changing quantity field from text field to dropdown
-        $table[$key]['qty']['#type'] = 'select';
-        $table[$key]['qty']['#options'] = get_quantity_options(10);
-        
-        // change image style to enlarge its view
-        $table[$key]['image'] = uc_product_get_picture($node->nid, 'cs_cart_product');
-                        
-        $table[$key]['unit_price'] = array(
-          '#markup' => theme('uc_product_price',array('element' => array('#value' => cs_product_unit_price($node)))),
-        );
-        $table[$key]['monthly_price'] = array(
-          '#markup' => theme('cs_monthly_price', array('monthly_price' => cs_product_monthly_price($node))),
-        );
-        
-        // changing total field to due today
-        $table[$key]['total']['#theme'] = 'cs_due_today_price';
-        $table[$key]['total']['#cell_attributes'] = array('class' => array('due-today'));
-        $table[$key]['total']['#price']= cs_product_due_today_price($node) * $table[$key]['qty']['#default_value'];
-        
-        // adding due today to calculate total due today
-        $subtotal_due_today+= $table[$key]['total']['#price'];
-      }
-    }
-    // find subtotal column and modify it
-    if(!isset($table[$key]['qty']) && !isset($table[$key]['remove'])){        
-      $table[$key]['total']['#prefix'] = '<span id="subtotal-title">' . t('Subtotal due today') . '</span> ';
-      $table[$key]['total']['#price'] = $subtotal_due_today;
-    }
-  }
-}
-
-function cs_form_uc_cart_checkout_review_form_alter(&$form){
-  $form['actions']['back']['#value']=t('Edit Info');
-  $form['actions']['submit']['#value']=t('Place Order');
-}
-
-function cs_form_uc_cart_checkout_form_alter(&$form, &$form_state){
-  $form['#attached']['css']=array();
-}
-/**
- * IMplementation of hook_form_alter for adding smartphones validation
- * @param type $form
- * @param type $form_state
- */
-function cs_form_phone_node_form_alter(&$form){
-  $form['base']['prices']['sell_price']['#required']=FALSE;
-  $form['#validate'][] = 'cs_phone_node_validate';
-}
-/**
- * Validate method for smart phones
- * it validates that if a product is of type smart phone then edge pricing is mandatory
- * @param type $form
- * @param type $form_state
- */
-function cs_phone_node_validate(&$form,&$form_state){
-  $phone = $form_state['values'];
-  if($phone['field_product_type']['und'][0]['tid'] == SMARTPHONE_TERM_ID && empty($phone['field_edge_price']['und'][0]['value'])){
-    form_set_error('field_edge_price', t('Edge Price is required for product type <strong>SmartPhone</strong>'));
-  }
-}
-/**
- * get array of options to show in quantity dropdown
- * array(1=>'1',2=>'2',3=>'3',4=>'4',5=>'5',6=>'6',7=>'7',8=>'8',9=>'9',10=>'10');
- * @param type $upto
- * @return int
- */
-function get_quantity_options($upto){
-  
-  $options = array();
-  $index=1;
-  while($index<=$upto){
-    $options[$index]=$index;
-    $index++;
-  }
-  return $options;
-}
-
-/**
- * IMplementation of hook_form_alter for adding element on add to cart form
- * @param type $form
- * @param type $form_state
- */
-function cs_form_alter(&$form, &$form_state,$form_id) {
-  if (strstr($form_id, 'uc_product_add_to_cart_form_')) {
-    
-    $default_price_plan = CONTRACT_PRICING;
-    if(!empty($form['node']['#value']->field_edge_price['und'][0]['value'])){
-      $default_price_plan = EDGE_PRICING;
-    }
-    $form['#attached']['js'][] = drupal_get_path('module', 'cs') . '/cart.js';
-    $form['price_plan'] = array('#type' => 'hidden', '#default_value' => $default_price_plan);
-    $form['#submit'][] = 'cs_add_to_cart_price_submit';
-  }
-}
-
-/**
- * Validate method for smart phones
- * it validates that if a product is of type smart phone then edge pricing is mandatory
- * @param type $form
- * @param type $form_state
- */
-function cs_add_to_cart_price_submit($form,&$form_state){  
-  $ob = $form_state['values'];  
-  $cart_id = uc_cart_get_id();
-  $price_plan = $ob['price_plan'];
-  $nid = $ob['node']->nid;
-  if(_is_product_price_plan_exists($cart_id, $nid)){
-    _update_product_price_plan($cart_id,$nid,$price_plan);
-  }else{
-    _add_product_price_plan($cart_id,$nid,$price_plan);
-  }
-}
-/**
- * Add the price plan of a product
- * @param type $cart_id
- * @param type $nid
- * @param type $price_plan
- */
-function _add_product_price_plan($cart_id,$nid,$price_plan){
-  db_insert('cs_cart_product_price_plan')
-    ->fields(array(
-      'cart_id' => $cart_id,
-      'nid' => $nid,
-      'price_plan' => $price_plan
-    ))
-    ->execute();
-}
-/**
- * Update the price plan of a product 
- * @param type $cart_id
- * @param type $nid
- * @param type $price_plan
- */
-function _update_product_price_plan($cart_id,$nid,$price_plan){
-  db_update('cs_cart_product_price_plan')
-    ->fields(array(
-      'price_plan' => $price_plan
-    ))
-    ->condition('cart_id', $cart_id)
-    ->condition('nid', $nid)
-    ->execute();
-}
-/**
- * Check if product price plan already exist
- * @param type $cart_id
- * @param type $nid
- * @return type
- */
-function _is_product_price_plan_exists($cart_id, $nid) {
-  $query = db_select('cs_cart_product_price_plan', 'cpp')
-    ->fields('cpp', array('id'))
-    ->condition('cart_id', $cart_id)
-    ->condition('nid', $nid)
-    ->execute()
-    ->fetchField();
-  return empty($query) ? FALSE : TRUE;
-}
-
-function _get_product_price_plan($node) {
-  $cart_id = isset($node->cart_id)?$node->cart_id:uc_cart_get_id();
-  $plan = db_select('cs_cart_product_price_plan', 'cpp')
-    ->fields('cpp', array('price_plan'))
-    ->condition('cart_id', $cart_id)
-    ->condition('nid', $node->nid)
-    ->execute()
-    ->fetchField();
-  if (empty($plan)){
-    return !empty($node->field_edge_price['und'][0]['value'])? EDGE_PRICING:CONTRACT_PRICING; 
-  }
-  return $plan;
 }

@@ -1,8 +1,5 @@
 <?php
 
-define('VTHEME', base_path() . drupal_get_path('theme', 'cellsales7') . '/');
-
-
 /**
  * @file
  * template.php
@@ -11,25 +8,6 @@ define('VTHEME', base_path() . drupal_get_path('theme', 'cellsales7') . '/');
 
 function cellsales7_preprocess_uc_order(&$variables) {
   cs_preprocess_uc_order($variables);
-}
-/**
- * Overriding the hook in order to change Review order page title
- * @param type $variables
- */
-function cellsales7_preprocess_page(&$variables){
-  if(strstr($_SERVER['REQUEST_URI'], 'cart/checkout/review')){
-    $variables['title'] = t('Order Summary');
-  }
-}
-/**
- * Overriding the hook in order to change Review order page title
- * @param type $variables
- */
-function cellsales7_preprocess_html(&$variables){
-  if(strstr($_SERVER['REQUEST_URI'], 'cart/checkout/review')){
-    $variables['head_title_array']['title'] = t('Order Summary');
-    $variables['head_title'] = t('Order Summary') . ' | ' . $variables['head_title_array']['name'];
-  }
 }
 
 
@@ -61,12 +39,11 @@ function cellsales7_uc_cart_review_table($variables) {
 
   // Set up table header.
   $header = array(
-	array('data' => t('Item'), 'class' => array('products')),
-	array('data' => t('Qty'), 'class' => array('quantity')),
-	array('data' => t('Unit Price'), 'class' => array('unit-price')),
+	array('data' => t('Products'), 'class' => array('products')),
+	array('data' => t('Quantity'), 'class' => array('quantity')),
+	array('data' => t('Cost'), 'class' => array('cost')),
     array('data' => t('Rebate'), 'class' => array('rebate')),
-    array('data' => t('Monthly Price'), 'class' => array('monthly-price')),
-    array('data' => t('Due Today'), 'class' => array('due-today')),
+    array('data' => t('Total'), 'class' => array('total')),
   );
 
   // Set up table rows.
@@ -75,37 +52,36 @@ function cellsales7_uc_cart_review_table($variables) {
     foreach (element_children($display_items['uc_order_product']) as $key) {
       $display_item = $display_items['uc_order_product'][$key];
       $subtotal += $display_item['total']['#price'];
-      $display_item['qty']['#theme'] = 'cs_simple_number';
-      $display_item['total']['#theme'] = 'cs_due_today_price';
       $rows[] = array(
-        array('data' => $display_item['product'], 'class' => array('products')),
+		array('data' => $display_item['product'], 'class' => array('products')),
         array('data' => $display_item['qty'], 'class' => array('quantity')),
-        array('data' => $display_item['price'], 'class' => array('unit-price')),
-        array('data' => $display_item['rebate'], 'class' => array('rebate')),
-        array('data' => $display_item['monthly_price'], 'class' => array('monthly-price')),
-        array('data' => $display_item['total'], 'class' => array('due-today')),
+        array('data' => $display_item['price'], 'class' => array('price')),
+		array('data' => $display_item['rebate'], 'class' => array('rebate')),
+        array('data' => $display_item['total'], 'class' => array('total')),
       );
     }
   }
 
-  // Add the total row as the final row.
-  $rows[] = array(
-    'data' => array(
-      // One cell
-      array(
-        'data' => array(
-          '#theme' => 'uc_price',
-          '#prefix' => '<span id="total-title">' . t('Total due today') . '</span> ', // Changed to "Total". Why Subtotal?
-          '#price' => $subtotal,
+  // Add the subtotal as the final row.
+  if ($show_subtotal) {
+    $rows[] = array(
+      'data' => array(
+        // One cell
+        array(
+          'data' => array(
+            '#theme' => 'uc_price',
+            '#prefix' => '<span id="subtotal-title">' . t('Total:') . '</span> ', // Changed to "Total". Why Subtotal?
+            '#price' => $subtotal,
+          ),
+          // Cell attributes
+          'colspan' => 5,
+          'class' => array('subtotal'),
         ),
-        // Cell attributes
-        'colspan' => 6,
-        'class' => array('total-due-today'),
       ),
-    ),
-    // Row attributes
-    'class' => array('total-due-today'),
-  );
+      // Row attributes
+      'class' => array('subtotal'),
+    );
+  }
 
   return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('class' => array('cart-review'))));
 }
@@ -133,57 +109,45 @@ function cellsales7_uc_cart_checkout_review($variables) {
   $panes = $variables['panes'];
   $form = $variables['form'];
 
+  drupal_add_css(drupal_get_path('module', 'uc_cart') . '/uc_cart.css');
+
   $output = '<div id="review-instructions">' . filter_xss_admin(variable_get('uc_checkout_review_instructions', uc_get_message('review_instructions'))) . '</div>';
-  $cart_table_html = '';
-  $output .= '<div class="order-review-div">';
-  
-  $output .= '<table class="table table-striped contact-store-table">';
-  $table_header = '<thead><tr>';
-  $table_body = '<tbody><tr>';
-  foreach ($panes as $pane) {
-    if(is_array($pane[0])){
-      foreach ($pane as $row) {
-        $table_header .= '<th>' . $row['title'] . '</th>';
-        $table_body .= '<td>' . $row['data'] . '</td>';
+
+  $output .= '<table class="order-review-table">';
+
+  foreach ($panes as $title => $data) {
+    $output .= '<tr class="pane-title-row">';
+    $output .= '<td colspan="2">' . $title . '</td>';
+    $output .= '</tr>';
+    if (is_array($data)) {
+      foreach ($data as $row) {
+        if (is_array($row)) {
+          if (isset($row['border'])) {
+            $border = ' class="row-border-' . $row['border'] . '"';
+          }
+          else {
+            $border = '';
+          }
+          $output .= '<tr' . $border . '>';
+          $output .= '<td class="title-col">' . $row['title'] . ':</td>';
+          $output .= '<td class="data-col">' . $row['data'] . '</td>';
+          $output .= '</tr>';
+        }
+        else {
+          $output .= '<tr><td colspan="2">' . $row . '</td></tr>';
+        }
       }
-    }else{
-      $cart_table_html = $pane[0];
+    }
+    else {
+      $output .= '<tr><td colspan="2">' . $data . '</td></tr>';
     }
   }
-  $table_header .='</tr></thead>';
-  $table_body .='</tr></tbody>';
-  $output .= $table_header . $table_body.'</table>';
-  
-  $output .= '<div class="pane-cart-div">';
-  $output .= $cart_table_html;
-  $output .= '</div>';
 
-  $output .= '<div class="review-button-div">';
-  $output .= drupal_render($form) ;
-  $output .= '</div>';
-  
-  $output .= '</div>';
+  $output .= '<tr class="review-button-row">';
+  $output .= '<td colspan="2">' . drupal_render($form) . '</td>';
+  $output .= '</tr>';
+
+  $output .= '</table>';
+
   return $output;
-}
-
-function home_banners_slider() {
-?>
-<ul class="rslides" id="slider1">
-<?php
-$query = new EntityFieldQuery();
-$entities = $query->entityCondition('entity_type', 'node')
-  ->propertyCondition('type', 'banner_slider')
-  ->propertyCondition('status', 1)
-  ->propertyOrderBy('created', 'DESC')
-  ->execute();
-$homeBanners = node_load_multiple(array_keys($entities['node'])); 
-foreach($homeBanners as $homeBanner){	
-$bannerImage = image_style_url('large', $homeBanner->field_banner_image['und'][0]['uri']);
-$bannerImageName = $homeBanner->field_banner_image['und'][0]['filename'];
-$bannerLink = $homeBanner->field_banner_link['und'][0]['value'];
-?>
-<li><a href = "<?php echo $bannerLink ?>"><img src="<?php echo $GLOBALS['base_url'].'/sites/default/files/'.$bannerImageName ?>"></a></li>
-<?php } ?>
-</ul>
-<?php	
 }

@@ -16,7 +16,6 @@ regions[content]        = 'Content'
 regions[sidebar_first]  = 'Primary'
 regions[sidebar_second] = 'Secondary'
 regions[footer]         = 'Footer'
-regions[footer_bottom]  = 'Footer Bottom'
 regions[page_top]       = 'Page top'
 regions[page_bottom]    = 'Page bottom'
 
@@ -27,10 +26,8 @@ regions[page_bottom]    = 'Page bottom'
 
 stylesheets[all][] = css/main.css
 stylesheets[all][] = css/normalize.css
-stylesheets[all][] = css/local.css
 stylesheets-conditional[IE 9][all][] = css/ie9.css
 stylesheets-conditional[lt IE 7][all][] = css/ie6-and-below.css
-stylesheets[all][] = css/responsiveslides.css
 
 ; For information on choosing the desired method, please read the Drupal
 ; Bootstrap sub-theme "how-to" documentation:
@@ -43,9 +40,7 @@ stylesheets[all][] = css/responsiveslides.css
 ; ;;;;;;;;;;;;;;;;;;;;;
 ; ;; Scripts
 ; ;;;;;;;;;;;;;;;;;;;;;
-
-scripts[] = 'js/responsiveslides.js'
-
+; 
 ; scripts[] = 'bootstrap/js/affix.js'
 ; scripts[] = 'bootstrap/js/alert.js'
 ; scripts[] = 'bootstrap/js/button.js'

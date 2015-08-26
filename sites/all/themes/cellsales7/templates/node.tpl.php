@@ -110,4 +110,3 @@
   <?php endif; ?>
   <?php print render($content['comments']); ?>
 </article>
-

@@ -495,7 +495,7 @@ function cs_mailer_form_submit($form, &$form_state) {
 function cs_location_file() {
   $out = fopen(file_directory_path() . '/BIgroup/store_location.csv', 'w');
   if ($out === false) {
-    watchdog('cs', 'Failed to create store_location.csv file.', WATCHDOG_ERROR);
+    watchdog('cs', 'Failed to create store_location.csv file.', array(), WATCHDOG_ERROR);
     return false;
   }
   fputcsv($out, array('Market', 'Location', 'Store Name', 'Latitude', 'Longitude'));
@@ -510,7 +510,7 @@ function cs_location_file() {
     fputcsv($out, array($store->marketid, $store->loc, $store->name, $store->latitude, $store->longitude));
   }
   fclose($out);
-  watchdog('cs', 'Created store_location.csv file');
+  watchdog('cs', 'Created store_location.csv file.');
   return true;
 }
 
